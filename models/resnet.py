@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+from torchvision.models.resnet import resnet18
+from collections import OrderedDict
 
 def get_configs(arch='resnet50'):
 
@@ -17,22 +19,110 @@ def get_configs(arch='resnet50'):
         return [3, 8, 36, 3], True
     else:
         raise ValueError("Undefined model")
-
+    
 class ResNetAutoEncoder(nn.Module):
 
-    def __init__(self, configs, bottleneck):
+    """This Runs an Autoencoder Model"""
+
+    def __init__(self, configs, bottleneck, args):
 
         super(ResNetAutoEncoder, self).__init__()
 
-        self.encoder = ResNetEncoder(configs=configs,       bottleneck=bottleneck)
-        self.decoder = ResNetDecoder(configs=configs[::-1], bottleneck=bottleneck)
+        if args.latent == 0:
+            self.encoder = nn.Sequential(OrderedDict([*(list(resnet18(pretrained=True).named_children())[:-2])]))
+            for param in self.encoder.parameters():
+                param.requires_grad = False
+            self.decoder = ResNetDecoder(configs=configs[::-1], bottleneck=bottleneck)
+        elif args.latent == 1:
+            self.encoder = nn.Sequential(OrderedDict([*(list(resnet18(pretrained=True).named_children())[:-1])]))
+            self.fc = nn.Linear(in_features=512, out_features=128)
+            self.decoder = nn.Sequential(
+                    nn.Linear(in_features=128, out_features=64),
+                    nn.ReLU(),
+                    nn.BatchNorm1d(64),  
+
+                    nn.Linear(in_features=64, out_features=32),
+                    nn.ReLU(), 
+                    nn.BatchNorm1d(32),  
+
+                    nn.Linear(in_features=32, out_features=16),
+                    nn.ReLU(),
+                    nn.BatchNorm1d(16),  
+                    nn.Dropout(0.2),
+
+                    nn.Linear(in_features=16, out_features=8),
+                    nn.ReLU(), 
+                    nn.BatchNorm1d(8),  
+
+                    nn.Linear(in_features=8, out_features=16),
+                    nn.ReLU(),
+                    nn.BatchNorm1d(16),  
+
+                    nn.Linear(in_features=16, out_features=32),
+                    nn.ReLU(),
+                    nn.BatchNorm1d(32),  
+
+                    nn.Linear(in_features=32, out_features=64),
+                    nn.ReLU(),  
+                    nn.BatchNorm1d(64),  
+                    nn.Dropout(0.2),
+
+                    nn.Linear(in_features=64, out_features=128)
+            )
+
     
     def forward(self, x):
-
+        """Forward Function."""
         x = self.encoder(x)
         x = self.decoder(x)
 
+        # x = self.encoder(x)
+        # x = self.fc(x.squeeze())
+        # x = self.decoder((x + noise.unsqueeze(0)))
+
         return x
+
+
+class ResNetClassify(nn.Module):
+    def __init__(self):
+        super(ResNetClassify, self).__init__()
+        self.encoder = nn.Sequential(OrderedDict([*(list(resnet18(pretrained=True).named_children())[:-1])]))
+        for param in self.encoder.parameters():
+            param.requires_grad = False
+        self.fc = nn.Linear(in_features=512, out_features=10)
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.fc(x.squeeze())
+        return x
+    
+class ResNetAutoClassify(nn.Module):
+
+    def __init__(self, configs, bottleneck):
+
+        super(ResNetAutoClassify, self).__init__()
+
+        self.encoder = resnet18(pretrained=True)
+        for param in self.encoder.parameters():
+            param.requires_grad = False
+        self.decoder = ResNetDecoder(configs=configs[::-1], bottleneck=bottleneck)
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels=512, out_channels=256, kernel_size=7, stride=1, padding=0,),
+            nn.BatchNorm2d(num_features=256),
+            nn.ReLU(inplace=True),
+        )
+        self.fc = nn.Linear(in_features=256, out_features=10)
+
+    def forward(self, x):
+
+        batch_size, _, _, _ = x.size()
+        noise = torch.normal(0.5, 0.1, size=(batch_size, 3, 224, 224)).cuda()
+        x1 = self.encoder(x + noise)
+        x4 = self.decoder(x1)
+        x2 = self.conv(x1)
+        x3 = self.fc(x2.squeeze())
+
+        return x4, noise , x3
 
 class ResNet(nn.Module):
 
@@ -140,16 +230,27 @@ class ResNetDecoder(nn.Module):
             nn.ConvTranspose2d(in_channels=64, out_channels=3, kernel_size=7, stride=2, padding=3, output_padding=1, bias=False),
         )
 
-        self.gate = nn.Sigmoid()
+        self.gate = nn.ReLU()
 
-    def forward(self, x):
+    def forward(self, x, skip_con = None):
 
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        x = self.conv5(x)
-        x = self.gate(x)
+        if skip_con is not None:
+            # breakpoint()
+            x1, x2, x3 = skip_con
+            x = self.conv1(x) + x3         # B, 256, 14, 14  +   B, 256, 14 , 14
+            x = self.conv2(x) + x2         # B, 128, 28, 28  +   B, 128, 28, 28
+            x = self.conv3(x) + x1         # B, 64, 56, 56  +   B, 64, 56, 56
+            x = self.conv4(x)
+            x = self.conv5(x)
+            x = self.gate(x)
+
+        else:
+            x = self.conv1(x)
+            x = self.conv2(x)
+            x = self.conv3(x)
+            x = self.conv4(x)
+            x = self.conv5(x)
+            x = self.gate(x)
 
         return x
 
