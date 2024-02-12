@@ -21,15 +21,15 @@ python3 -u train_classify.py \
     --initclass $INITCLASS \
     --increment 10 \
     --workers 8 \
-    --epochs 100 \
+    --epochs 30 \
     --start-epoch 0 \
     --batch-size 32 \
-    --learning-rate 0.0005 \
+    --learning-rate 10e-5 \
     --momentum 0.9 \
     --weight-decay 1e-4 \
     --print-freq 100 \
     --pth-save-fold ${OUTPUT} \
-    --pth-save-epoch 50 \
+    --pth-save-epoch 30 \
     --parallel 0 \
     --dist-url 'tcp://localhost:10001' 2>&1 | tee ${OUTPUT}/output.log 
 

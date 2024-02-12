@@ -6,10 +6,10 @@ export CUDA_VISIBLE_DEVICES=0
 # settings
 MODEL_ARC=$1
 NAME=$2
-REPLAY=$3
-MEAN=$4
-INITCLASS=$5
-PREV_WEIGHTS=$6
+# REPLAY=$3
+MEAN=$3
+# INITCLASS=$5
+# PREV_WEIGHTS=$6
 OUTPUT=results/${NAME}-${MODEL_ARC}/
 mkdir -p ${OUTPUT}
 
@@ -17,12 +17,10 @@ mkdir -p ${OUTPUT}
 python3 -u train.py \
     --arch $MODEL_ARC \
     --name $NAME \
-    --replay $REPLAY \
     --mean $MEAN \
-    --initclass $INITCLASS \
+    --initclass 0 \
     --increment 10 \
-    --prev_task_weights $PREV_WEIGHTS \
-    --workers 32 \
+    --workers 8 \
     --epochs 100 \
     --start-epoch 0 \
     --batch-size 32 \
@@ -37,3 +35,5 @@ python3 -u train.py \
 
 
 # bash run/train.sh resnet18 name 1 0.5 0
+
+# bash run/train.sh resnet18 try 0.5

@@ -27,6 +27,9 @@ from sklearn.metrics import (
 
 from tqdm import tqdm
 from torchinfo import summary
+import random
+
+random.seed(0)
 
 import wandb
 
@@ -42,21 +45,21 @@ def get_args():
                         help='backbone architechture')
     parser.add_argument('--name', type=str, 
                     help='wandb name')
-    parser.add_argument('--replay', type=int,
+    parser.add_argument('--replay', type=int, default=0,
                         help='Is replay')
     parser.add_argument('--mean', type=float,
                         help='Noise Mean Value to be added')
     parser.add_argument('--std', type=float, default=0.1,
                         help='Noise Std Value to be added')
-    parser.add_argument('--initclass', type=int,
+    parser.add_argument('--initclass', type=int, default=0,
                         help='Class to start with')
     parser.add_argument('--increment', type=int, default=10,
                         help='Increment added to the initial class')  
-    parser.add_argument('--prev_task_weights', type=str, default=None,
-                        help='Weights of the previous task')   
+    # parser.add_argument('--prev_task_weights', type=str, default=None,
+    #                     help='Weights of the previous task')   
     parser.add_argument('-j', '--workers', default=16, type=int, metavar='N', 
                         help='number of data loading workers (default: 0)')
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+    parser.add_argument('--epochs', default=31.5, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
@@ -127,125 +130,138 @@ def main_worker(gpu, args):
     if args.rank == 0:
         print('=> modeling the network {} ...'.format(args.arch))
 
-    task_id = ((args.initclass)//10)+1
+
     mean_diff = 1
+    args.replay = False
 
-    model = builder.BuildAutoEncoder(args)
-    print('Autoencoder')
+    for k in range(10):
+        print(f"Start of Task number: {((k * 10)//10)+1}")
+        print(f"Start of Class number: {k*10}")
+        print(f"Mean: {args.mean}")
+        print(f"Std: {args.std}")
 
-    # if task_id == 0:       # warm up
-    #     for param in model.module.encoder.parameters():
-    #         param.requires_grad = False
-
-    if task_id > 1:
-        checkpoint = torch.load(args.prev_task_weights)['state_dict']
-        model.load_state_dict(checkpoint)
-
-        # for param in model.module.encoder.parameters():
-        #     param.requires_grad = False
-
-    summary(model.cuda(), [(args.batch_size,3,224,224),(args.batch_size,512)], col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
-    # summary(model.cuda(), (args.batch_size,3,224,224), col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
-
-    if args.rank == 0:       
-        total_params = sum(p.numel() for p in model.parameters())
-        print('=> num of params: {} ({}M)'.format(total_params, int(total_params * 4 / (1024*1024))))
-    
-    if args.rank == 0:
-        print('=> building the oprimizer ...')
-    # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), args.lr,)
-    optimizer = torch.optim.SGD(
-            # filter(lambda p: p.requires_grad, model.parameters()),
-            model.parameters(),
-            args.lr,
-            momentum=args.momentum,
-            weight_decay=args.weight_decay)    
-    if args.rank == 0:
-        print('=> building the dataloader ...')
-
-    trsf = transforms.Compose([
-    transforms.Resize((224,224)),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    ])
-    
-    dataset = NoisyDataset(root = './data', mean=args.mean, std = args.std, 
-                           classes_subset=list(np.arange(args.initclass, args.initclass + args.increment)), 
-                           max_samples = None, transform=trsf, args=args)
-    
-    if args.replay:
-        dataset_replay = []
-        for num in range(len(range(task_id-1))):
-            datasets = NoisyDataset(root = './data', mean=args.mean - ((num * mean_diff) + 1), std = args.std,
-                                classes_subset=list(np.arange(((task_id-2-num)*10), (((task_id-2-num)*10) + args.increment))), 
-                                max_samples = 2000//(task_id-1), transform=trsf, args=args)
-            dataset_replay.append(datasets)
-            print(num, args.mean - ((num * mean_diff) + 1), (task_id-2-num)*10, 2000//(task_id-1))
+        args.initclass = k*10
+        task_id = ((args.initclass)//10)+1
         
-        # breakpoint()
-        dataset_replay.append(dataset)
+        model = builder.BuildAutoEncoder(args)
+        print('Autoencoder')
 
-        con_datatset = ConcatDataset(dataset_replay)
-        train_loader = DataLoader(con_datatset,
-                                shuffle=True,
-                                batch_size=args.batch_size, 
-                                num_workers=args.workers, 
-                                pin_memory=True,
-                                drop_last=True)
+        if task_id > 1:
+            args.replay = True
+            checkpoint = torch.load(f"{args.pth_save_fold}{str(task_id-1).zfill(2)}/100.pth")['state_dict']
+            model.load_state_dict(checkpoint)
 
-    else:
-        train_loader = DataLoader(
-                    dataset,
-                    shuffle=True,
-                    batch_size=args.batch_size,
-                    num_workers=args.workers,
-                    pin_memory=True,
-                    drop_last=True
-                    )
+        summary(model.cuda(), [(args.batch_size,3,224,224),(args.batch_size,512)], col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
+        # summary(model.cuda(), (args.batch_size,3,224,224), col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
+
+        if args.rank == 0:       
+            total_params = sum(p.numel() for p in model.parameters())
+            print('=> num of params: {} ({}M)'.format(total_params, int(total_params * 4 / (1024*1024))))
         
-    if args.rank == 0:
-        print('=> building the criterion ...')
-    
-    criterion = nn.L1Loss(reduction='none')
-    print('L1 Loss')
+        if args.rank == 0:
+            print('=> building the oprimizer ...')
+        # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), args.lr,)
+        optimizer = torch.optim.SGD(
+                # filter(lambda p: p.requires_grad, model.parameters()),
+                model.parameters(),
+                args.lr,
+                momentum=args.momentum,
+                weight_decay=args.weight_decay)    
+        if args.rank == 0:
+            print('=> building the dataloader ...')
 
-    global iters
-    iters = 0
-
-    model.train()
-    if args.rank == 0:
-        print('=> starting training engine ...')
-    for epoch in range(args.start_epoch, args.epochs):
+        trsf = transforms.Compose([
+        transforms.Resize((224,224)),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        ])
         
-        global current_lr
-        current_lr = utils.adjust_learning_rate_cosine(optimizer, epoch, args)
-        
-        # if epoch == 0:        #### Just to check whether the weights of the previous task is loaded properly
-        #     do_validate(model, epoch, args, task_id, mean_diff)
+        dataset = NoisyDataset(root = './data', mean=args.mean, std = args.std, 
+                            classes_subset=list(np.arange(args.initclass, args.initclass + args.increment)), 
+                            max_samples = None, transform=trsf, args=args)
 
-        # train for one epoch
-        do_train(train_loader, model, criterion, optimizer, epoch, args)
-
-        if (epoch+1) % args.print_freq == 0 and args.rank == 0:
-            do_validate(model, epoch, args, task_id, mean_diff)
-
-        # save pth
-        if (epoch+1) % args.pth_save_epoch == 0 and args.rank == 0:
-            state_dict = model.state_dict()
-
-            torch.save(
-                {
-                    'epoch': epoch + 1,
-                    'arch': args.arch,
-                    'state_dict': state_dict,
-                    'optimizer' : optimizer.state_dict(),
-                },
-                os.path.join(args.pth_save_fold, '{}.pth'.format(str(epoch+1).zfill(3)))
-            )
+        if args.replay:
+            dataset_replay = []
+            for num in range(len(range(task_id-1))):
+                datasets = NoisyDataset(root = './data', mean=args.mean - ((num * mean_diff) + mean_diff), std = args.std,
+                                    classes_subset=list(np.arange(((task_id-2-num)*10), (((task_id-2-num)*10) + args.increment))), 
+                                    max_samples = 2000//(task_id-1), transform=trsf, args=args)
+                dataset_replay.append(datasets)
+                print(num, args.mean - ((num * mean_diff) + mean_diff), (task_id-2-num)*10, 2000//(task_id-1))
             
-            print(' : save pth for epoch {}'.format(epoch + 1))
+            # breakpoint()
+            dataset_replay.append(dataset)
 
-def do_train(train_loader, model, criterion, optimizer, epoch, args):
+            con_datatset = ConcatDataset(dataset_replay)
+
+            # custom_sampler = CustomSampler(con_datatset)
+            # train_loader = torch.utils.data.DataLoader(con_datatset, batch_size=args.batch_size, sampler=custom_sampler)
+            # print(next(iter(train_loader)))
+
+            train_loader = DataLoader(con_datatset,
+                                    shuffle=True,
+                                    batch_size=args.batch_size, 
+                                    num_workers=args.workers, 
+                                    pin_memory=True,
+                                    drop_last=True)
+
+        else:
+            train_loader = DataLoader(
+                        dataset,
+                        shuffle=True,
+                        batch_size=args.batch_size,
+                        num_workers=args.workers,
+                        pin_memory=True,
+                        drop_last=True
+                        )
+
+        if args.rank == 0:
+            print('=> building the criterion ...')
+        
+        criterion = nn.L1Loss(reduction='none')
+        print('L1 Loss')
+
+        global iters
+        iters = 0
+
+        model.train()
+        if args.rank == 0:
+            print('=> starting training engine ...')
+        for epoch in range(args.start_epoch, args.epochs):
+            
+            global current_lr
+            current_lr = utils.adjust_learning_rate_cosine(optimizer, epoch, args)
+        
+            if epoch == 0:        #### Just to check whether the weights of the previous task is loaded properly
+                do_validate(model, epoch, args, task_id, mean_diff)
+
+            # train for one epoch
+            do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id)
+
+            if (epoch+1) % args.print_freq == 0 and args.rank == 0:
+                do_validate(model, epoch, args, task_id, mean_diff)
+
+            # save pth
+            save_path = os.path.join(args.pth_save_fold, str(task_id).zfill(2), '{}.pth'.format(str(epoch+1).zfill(3)))
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            if (epoch+1) % args.pth_save_epoch == 0 and args.rank == 0:
+                state_dict = model.state_dict()
+                torch.save(
+                    {
+                        'epoch': epoch + 1,
+                        'arch': args.arch,
+                        'state_dict': state_dict,
+                        'optimizer' : optimizer.state_dict(),
+                    },  save_path  
+                    # os.path.join(args.pth_save_fold, str(task_id).zfill(2), '{}.pth'.format(str(epoch+1).zfill(3)))
+                )
+                
+                print(' : save pth for epoch {}'.format(epoch + 1))
+        
+        args.mean += 1
+        
+
+def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
     batch_time = utils.AverageMeter('Time', ':6.2f')
     data_time = utils.AverageMeter('Data', ':2.2f')
     losses = utils.AverageMeter('Loss', ':.4f')
@@ -257,40 +273,85 @@ def do_train(train_loader, model, criterion, optimizer, epoch, args):
         prefix="Epoch: [{}]".format(epoch+1))
     end = time.time()
 
-    # model.train()
+    model.train()
     # update lr
     learning_rate.update(current_lr)
     total_steps = len(train_loader)
-    for i, (input, target, added_noise, gt_noise) in enumerate(train_loader):
+
+    for i, (image, target, added_noise, gt_noise) in enumerate(train_loader):
+        optimizer.zero_grad()
         data_time.update(time.time() - end)
         global iters
         iters += 1
         
-        input = input.cuda(non_blocking=True)
+        image = image.cuda(non_blocking=True)
         target = target.cuda(non_blocking=True)
         added_noise = added_noise.cuda(non_blocking=True)
         gt_noise = gt_noise.cuda(non_blocking=True)
 
-        output = model(input, added_noise)
-        # output = model(input)
+        output = model(image, added_noise)
+        # output = model(image)
 
-        # weights_value = utils.task_weight(((args.initclass)//10))
-        # weights_value = { 1: 1, 0: 100}
+        # print("Images from Different Datasets", np.unique((target // args.increment).cpu(), return_counts=True)[1])
+
+        # if len(np.unique((target // args.increment).cpu(), return_counts=True)[1]) == 1:
+            # breakpoint()
+
+        # if len(np.unique((target // args.increment).cpu(), return_counts=True)[1]) == 1:
+        #     weight_2 = 1
+        #     weight_1 = 0
+        #     weight_0 = 0
+        # elif len(np.unique((target // args.increment).cpu(), return_counts=True)[1]) == 2:
+        #     weight_2 = args.batch_size/(np.unique((target // args.increment).cpu(), return_counts=True)[1][1])
+        #     weight_1 = args.batch_size/(np.unique((target // args.increment).cpu(), return_counts=True)[1][0])
+        #     weight_0 = 1
+        # else:
+        #     weight_1 = args.batch_size/(np.unique((target // args.increment).cpu(), return_counts=True)[1][1])
+        #     weight_0 = args.batch_size/(np.unique((target // args.increment).cpu(), return_counts=True)[1][0])
+        
+        # keys_array, values_array =np.unique((target // args.increment).cpu(), return_counts=True)
+        # original_dict = dict(zip(keys_array, values_array))
+        # weights_value = {key: args.batch_size / value for key, value in original_dict.items()}
+
+        # # weights_value = utils.task_weight(((args.initclass)//10))
+        # weights_value = { 2: weight_2, 1: weight_1, 0: weight_0}
+        # weights_value = {9:1, 8: 31.3, 7: 31.5, 6:31.5, 5:31.5, 4:31.5, 3:31.5, 2: 31.5, 1: 31.5, 0: 31.5}
+
+        # print("Weight Value of datasets: ", weights_value)
 
         # adjusted_weights_list = []
         # for value in (target // args.increment):
         #     adjusted_weights_list.append(weights_value[int(value.item())])
-
-        loss1 = criterion(output - (target // args.increment).view(args.batch_size, 1),
-                            gt_noise - (target // args.increment).view(args.batch_size, 1))
+        
+        # loss1 = criterion(output - (target // args.increment).view(args.batch_size, 1),
+        #                     gt_noise - (target // args.increment).view(args.batch_size, 1))
+        
+        # loss1 = criterion(output, gt_noise) 
+        
+        # loss1_up = torch.mul(torch.mean(loss1, axis=(1)),  torch.tensor(adjusted_weights_list).cuda())
+        # loss1_mean = torch.mean(loss1)
+        loss1 = criterion(output, gt_noise)
         # loss1_up = torch.mul(torch.mean(loss1, axis=(1)),  torch.tensor(adjusted_weights_list).cuda())
         loss1_mean = torch.mean(loss1)
 
-        loss2 = criterion(torch.floor(torch.mean(output, dim=(1))), torch.floor(torch.mean(gt_noise, dim=(1))))
-        # loss2 = criterion(torch.mean(output, dim=(1)), torch.floor(torch.mean(gt_noise, dim=(1))))
+
+        # loss2 = criterion(torch.floor(torch.mean(output, dim=(1))), torch.floor(torch.mean(gt_noise, dim=(1))))
+        # loss2_mean = torch.mean(loss2)
+        # loss2 = criterion(torch.mean(output, dim=(1)), torch.mean(gt_noise, dim=(1)))
+
+        # loss2 = torch.abs(torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+        #          0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], device='cuda:0', requires_grad=True))
+
+        # loss2 = torch.tensor([0])
+        # loss2 = criterion(torch.floor((torch.mean(output, dim=(1))/10)), torch.floor((torch.mean(gt_noise, dim=(1)))/10))
+
         # loss2_up = torch.mul(loss2,  torch.tensor(adjusted_weights_list).cuda())
         
-        loss2_mean = torch.mean(loss2)
+        # loss2_mean = torch.mean(loss2)
+        
+        # print(np.unique((target // args.increment).cpu(), return_counts=True)[1][0])
+        # print(np.unique((target // args.increment).cpu(), return_counts=True)[1][1])
+        # print(np.unique((target // args.increment).cpu(), return_counts=True)[1][0] / np.unique((target // args.increment).cpu(), return_counts=True)[1][1])
 
         # loss1 = criterion(output - (target // args.increment).view(args.batch_size, 1,1,1),
         #                     gt_noise - (target // args.increment).view(args.batch_size, 1,1,1))
@@ -299,24 +360,25 @@ def do_train(train_loader, model, criterion, optimizer, epoch, args):
         # loss2 = criterion(torch.floor(torch.mean(output, dim=(1,2,3))), torch.floor(torch.mean(gt_noise, dim=(1,2,3))))
         # loss2_mean = torch.mean(loss2)
 
-        print("------------")
-        print("GT Noise: ", gt_noise[0].mean())
-        print("Added Noise: ", added_noise[0].mean())
-        print("Model Mean: ", output[0].mean())
-        print("Model STD: ", output[0].std())
-        print("Loss 1: ", loss1[0].mean())
-        print("Loss 2: ", loss2[0])
-        print('------------')
+        # print("------------")
+        # print("GT Noise: ", gt_noise[0].mean())
+        # print("Added Noise: ", added_noise[0].mean())
+        # print("Model Mean: ", output[0].mean())
+        # print("Model STD: ", output[0].std())
+        # print("Loss 1: ", loss1[0].mean())
+        # print("Loss 2: ", loss2[0])
+        # print('------------')
 
-        loss = loss1_mean + loss2_mean
+        # loss = loss1_mean + loss2_mean
+        # loss = loss1_mean
 
-        optimizer.zero_grad()
-        loss.backward()
+        loss1_mean.backward()
+        # loss.backward()
         # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
 
         torch.cuda.synchronize()
-        losses.update(loss.item(), input.size(0))          
+        losses.update(loss1_mean.item(), image.size(0))          
 
         if args.rank == 0:
             batch_time.update(time.time() - end)        
@@ -324,46 +386,50 @@ def do_train(train_loader, model, criterion, optimizer, epoch, args):
 
         if i % args.print_freq == 0 and args.rank == 0:
             progress.display(i)
+            print(epoch*total_steps +i)
             wandb.log({
-                "loss/loss": loss,
-                "loss/loss1": loss1_mean,
-                "loss/loss2": loss2_mean,
-                'model/model_mean': output.mean(),
-                'model/model_std': output.std(),
-                'data/Added noise mean': added_noise.mean(),
-                'data/GT noise mean': gt_noise.mean(),
-                'data/Added noise std': added_noise.std(),
-                'data/GT noise std': gt_noise.std(),
-                "experiment/LR": current_lr,
-                "experiment/Epoch": epoch+1
-            }, step=epoch*total_steps +i)
+                # f"{task_id}loss/loss": loss,
+                f"{task_id}/loss/loss1": loss1_mean,
+                # f"{task_id}loss/loss2": loss2_mean,
+                f"{task_id}/model/model_mean": output.mean(),
+                f"{task_id}/model/model_std": output.std(),
+                f"{task_id}/data/Added noise mean": added_noise.mean(),
+                f"{task_id}/data/GT noise mean": gt_noise.mean(),
+                f"{task_id}/data/Added noise std": added_noise.std(),
+                f"{task_id}/data/GT noise std": gt_noise.std(),
+                f"{task_id}/experiment/LR": current_lr,
+                f"{task_id}/experiment/Epoch": epoch+1
+            }, 
+            # step=(epoch*total_steps +i) + g_step
+            )
+        
+        # return (epoch*total_steps +i) + g_step
 
 def do_validate(model, epoch, args, task_id, mean_diff):
 
     current_mean, current_std = validate(model, args.mean)
     print(f"Validation - current mean = ({current_mean},{args.mean})")
 
-    accuracy, precision_recall_fscore_support = validate_classification(model, args.mean, task_id)
-    wandb.log({
-        "Validation/F1 Score/Accuracy": accuracy,
-        "Validation/Precision/Precision class 0": precision_recall_fscore_support[0][0],
-        "Validation/Precision/Precision class 1": precision_recall_fscore_support[0][1],
-        "Validation/Recall/Recall class 0": precision_recall_fscore_support[1][0],
-        "Validation/Recall/Recall class 1": precision_recall_fscore_support[1][1],
-        "Validation/F1 Score/F1 Score class 0": precision_recall_fscore_support[2][0],
-        "Validation/F1 Score/F1 Score class 1": precision_recall_fscore_support[2][1],
-    })
+    if task_id > 1:
+        accuracy, precision_recall_fscore_support = validate_classification(model, args.mean, task_id)
+        wandb.log({f"{task_id}/Validation/F1 Score/Accuracy": accuracy})
+        for num in reversed(range(len(range(task_id)))):
+            wandb.log({
+                f"{task_id}/Validation/Precision/Precision class {num}": precision_recall_fscore_support[0][task_id-1-num],
+                f"{task_id}/Validation/Recall/Recall class {num}": precision_recall_fscore_support[1][num],
+                f"{task_id}/Validation/F1 Score/F1 Score class {num}": precision_recall_fscore_support[2][num],
+            })
 
     if task_id > 1:                                                           
         for num in range(len(range(task_id-1))):
             prev_mean, prev_stf = validate(model, args.mean-((num * mean_diff) + 1))                      
-            print(f"Validation - prev_mean = ({prev_mean},{args.mean-((num * mean_diff) + 1)})")          
+            print(f"{task_id}/Validation - prev_mean = ({prev_mean},{args.mean-((num * mean_diff) + 1)})")          
             wandb.log({
-            f"Validation/Noise/Mean after adding {args.mean - ((num * mean_diff) + 1)}": prev_mean,                         
+            f"{task_id}/Validation/Noise/Mean after adding {args.mean - ((num * mean_diff) + 1)}": prev_mean,                         
             })
 
     wandb.log({
-        f"Validation/Noise/Mean after adding {args.mean}": current_mean,
+        f"{task_id}/Validation/Noise/Mean after adding {args.mean}": current_mean,
     })
 
 def validate(model, test_noise_mean):
@@ -388,14 +454,14 @@ def validate(model, test_noise_mean):
     model.eval()
     pred_noises = []
     with torch.no_grad():
-        for _, (input, target, noise) in tqdm(enumerate(val_loader)):
+        for _, (image, target, noise) in tqdm(enumerate(val_loader)):
 
-            input = input.cuda(non_blocking=True)
+            image = image.cuda(non_blocking=True)
             target = target.cuda(non_blocking=True)
             noise = noise.cuda(non_blocking=True)
             
-            output = model(input, noise)
-            # output = model(input)
+            output = model(image, noise)
+            # output = model(image)
             pred_noises.append(torch.mean(output, dim=(1)).detach().cpu())        
     
     concat_pred_noises = torch.cat(pred_noises)
@@ -423,7 +489,7 @@ def validate_classification(model, test_noise_mean, task_id):
 
     noises = []
     if task_id > 1:
-        for num in range(len(range(task_id-1))):
+        for num in reversed(range(len(range(task_id-1)))):
             noises.append(torch.normal(test_noise_mean-(num + 1), 0.1, size=(512,1)).cuda(non_blocking=True))
     
     noises.append(torch.normal(test_noise_mean, 0.1, size=(512,1)).cuda(non_blocking=True))
@@ -435,16 +501,16 @@ def validate_classification(model, test_noise_mean, task_id):
     gt = []
 
     with torch.no_grad():
-        for _, (input, target, _) in tqdm(enumerate(val_loader)):
+        for _, (image, target, _) in tqdm(enumerate(val_loader)):
 
-            input = input.cuda(non_blocking=True)
+            image = image.cuda(non_blocking=True)
             target = target.cuda(non_blocking=True)
             dataset_number = (target // args.increment)
 
             losses = []
             for idx, noise in enumerate(noises):
-                output = model(input, noise.transpose(0, 1))
-                # output = model(input)
+                output = model(image, noise.transpose(0, 1))
+                # output = model(image)
 
                 loss = criterion(torch.mean(output, dim=(1)), torch.mean(noise.transpose(0, 1), dim=(1)))
                 losses.append(loss)

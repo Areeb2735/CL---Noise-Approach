@@ -125,6 +125,8 @@ def main(args):
     mean_5 = []
     mean_6 = []
     mean_7 = []
+    mean_8 = []
+    mean_9 = []
 
     with torch.no_grad():
         for i, (input, target, dataset_number) in tqdm(enumerate(val_loader)):
@@ -138,6 +140,8 @@ def main(args):
             noise_5 = torch.normal(4.5, 0.1, size=(512,1)).cuda(non_blocking=True)
             noise_6 = torch.normal(5.5, 0.1, size=(512,1)).cuda(non_blocking=True)
             noise_7 = torch.normal(6.5, 0.1, size=(512,1)).cuda(non_blocking=True)
+            noise_8 = torch.normal(7.5, 0.1, size=(512,1)).cuda(non_blocking=True)
+            noise_9 = torch.normal(8.5, 0.1, size=(512,1)).cuda(non_blocking=True)
 
             output_1 = recons_model(input, noise_1.transpose(0, 1))
             output_2 = recons_model(input, noise_2.transpose(0, 1))
@@ -146,6 +150,8 @@ def main(args):
             output_5 = recons_model(input, noise_5.transpose(0, 1))
             output_6 = recons_model(input, noise_6.transpose(0, 1))
             output_7 = recons_model(input, noise_7.transpose(0, 1))
+            output_8 = recons_model(input, noise_8.transpose(0, 1))
+            output_9 = recons_model(input, noise_9.transpose(0, 1))
 
             # output_1 = recons_model(input)
             # output_2 = recons_model(input)
@@ -154,6 +160,8 @@ def main(args):
             # output_5 = recons_model(input)
             # output_6 = recons_model(input)
             # output_7 = recons_model(input)
+            # output_8 = recons_model(input)
+            # output_9 = recons_model(input)
             
             mean_1.append(output_1.mean().item())
             mean_2.append(output_2.mean().item())
@@ -162,6 +170,8 @@ def main(args):
             mean_5.append(output_5.mean().item())
             mean_6.append(output_6.mean().item())
             mean_7.append(output_7.mean().item())
+            mean_8.append(output_8.mean().item())
+            mean_9.append(output_9.mean().item())
 
             loss1 = criterion(torch.mean(output_1, dim=(1)), torch.mean(noise_1.transpose(0, 1), dim=(1)))      
             loss2 = criterion(torch.mean(output_2, dim=(1)), torch.mean(noise_2.transpose(0, 1), dim=(1)))
@@ -170,85 +180,162 @@ def main(args):
             loss5 = criterion(torch.mean(output_5, dim=(1)), torch.mean(noise_5.transpose(0, 1), dim=(1)))
             loss6 = criterion(torch.mean(output_6, dim=(1)), torch.mean(noise_6.transpose(0, 1), dim=(1)))
             loss7 = criterion(torch.mean(output_7, dim=(1)), torch.mean(noise_7.transpose(0, 1), dim=(1)))
+            loss8 = criterion(torch.mean(output_8, dim=(1)), torch.mean(noise_8.transpose(0, 1), dim=(1)))
+            loss9 = criterion(torch.mean(output_9, dim=(1)), torch.mean(noise_9.transpose(0, 1), dim=(1)))
+
+            if loss1 < loss2 and loss1 < loss3 and loss1 < loss4 and loss1 < loss5 and loss1 < loss6 and loss1 < loss7 and loss1 < loss8 and loss1 < loss9:
+                dataset_pd = 0
+                dataset_pred.append(dataset_pd)
+                class_checkpoint = torch.load("results/mlp_1-resnet18/030.pth")['state_dict']
+            elif loss2 < loss1 and loss2 < loss3 and loss2 < loss4 and loss2 < loss5 and loss2 < loss6 and loss2 < loss7 and loss2 < loss8 and loss2 < loss9:
+                dataset_pd = 1
+                dataset_pred.append(dataset_pd)  
+                class_checkpoint = torch.load("results/mlp_2-resnet18/030.pth")['state_dict']
+            elif loss3 < loss1 and loss3 < loss2 and loss3 < loss4 and loss3 < loss5 and loss3 < loss6 and loss3 < loss7 and loss3 < loss8 and loss3 < loss9:
+                dataset_pd = 2
+                dataset_pred.append(dataset_pd)  
+                class_checkpoint = torch.load("results/mlp_3-resnet18/030.pth")['state_dict']
+            elif loss4 < loss1 and loss4 < loss2 and loss4 < loss3 and loss4 < loss5 and loss4 < loss6 and loss4 < loss7 and loss4 < loss8 and loss4 < loss9:
+                dataset_pd = 3
+                dataset_pred.append(dataset_pd)  
+                class_checkpoint = torch.load("results/mlp_4-resnet18/030.pth")['state_dict']
+            elif loss5 < loss1 and loss5 < loss2 and loss5 < loss3 and loss5 < loss4 and loss5 < loss6 and loss5 < loss7 and loss5 < loss8 and loss5 < loss9:
+                dataset_pd = 4
+                dataset_pred.append(dataset_pd)
+                class_checkpoint = torch.load("results/mlp_5-resnet18/030.pth")['state_dict']
+            elif loss6 < loss1 and loss6 < loss2 and loss6 < loss3 and loss6 < loss4 and loss6 < loss5 and loss6 < loss7 and loss6 < loss8 and loss6 < loss9:
+                dataset_pd = 5
+                dataset_pred.append(dataset_pd)
+                class_checkpoint = torch.load("results/mlp_6-resnet18/030.pth")['state_dict']
+            elif loss7 < loss1 and loss7 < loss2 and loss7 < loss3 and loss7 < loss4 and loss7 < loss5 and loss7 < loss6 and loss7 < loss8 and loss7 < loss9:
+                dataset_pd = 6
+                dataset_pred.append(dataset_pd)
+                class_checkpoint = torch.load("results/mlp_7-resnet18/030.pth")['state_dict']
+            elif loss8 < loss1 and loss8 < loss2 and loss8 < loss3 and loss8 < loss4 and loss8 < loss5 and loss8 < loss6 and loss8 < loss7 and loss8 < loss9:
+                dataset_pd = 7
+                dataset_pred.append(dataset_pd)
+                class_checkpoint = torch.load("results/mlp_8-resnet18/030.pth")['state_dict']
+            elif loss9 < loss1 and loss9 < loss2 and loss9 < loss3 and loss9 < loss4 and loss9 < loss5 and loss9 < loss6 and loss9 < loss7 and loss9 < loss8:
+                dataset_pd = 8
+                dataset_pred.append(dataset_pd)
+                class_checkpoint = torch.load("results/mlp_9-resnet18/030.pth")['state_dict']
+
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+            # if loss1 < loss2 and loss1 < loss3 and loss1 < loss4 and loss1 < loss5 and loss1 < loss6 and loss1 < loss7 and loss1 < loss8:
+            #     dataset_pd = 0
+            #     dataset_pred.append(dataset_pd)
+            #     class_checkpoint = torch.load("results/mlp_1-resnet18/030.pth")['state_dict']
+            # elif loss2 < loss1 and loss2 < loss3 and loss2 < loss4 and loss2 < loss5 and loss2 < loss6 and loss2 < loss7 and loss2 < loss8:
+            #     dataset_pd = 1
+            #     dataset_pred.append(dataset_pd)  
+            #     class_checkpoint = torch.load("results/mlp_2-resnet18/030.pth")['state_dict']
+            # elif loss3 < loss1 and loss3 < loss2 and loss3 < loss4 and loss3 < loss5 and loss3 < loss6 and loss3 < loss7 and loss3 < loss8:
+            #     dataset_pd = 2
+            #     dataset_pred.append(dataset_pd)  
+            #     class_checkpoint = torch.load("results/mlp_3-resnet18/030.pth")['state_dict']
+            # elif loss4 < loss1 and loss4 < loss2 and loss4 < loss3 and loss4 < loss5 and loss4 < loss6 and loss4 < loss7 and loss4 < loss8:
+            #     dataset_pd = 3
+            #     dataset_pred.append(dataset_pd)  
+            #     class_checkpoint = torch.load("results/mlp_4-resnet18/030.pth")['state_dict']
+            # elif loss5 < loss1 and loss5 < loss2 and loss5 < loss3 and loss5 < loss4 and loss5 < loss6 and loss5 < loss7 and loss5 < loss8:
+            #     dataset_pd = 4
+            #     dataset_pred.append(dataset_pd)
+            #     class_checkpoint = torch.load("results/mlp_5-resnet18/030.pth")['state_dict']
+            # elif loss6 < loss1 and loss6 < loss2 and loss6 < loss3 and loss6 < loss4 and loss6 < loss5 and loss6 < loss7 and loss6 < loss8:
+            #     dataset_pd = 5
+            #     dataset_pred.append(dataset_pd)
+            #     class_checkpoint = torch.load("results/mlp_6-resnet18/030.pth")['state_dict']
+            # elif loss7 < loss1 and loss7 < loss2 and loss7 < loss3 and loss7 < loss4 and loss7 < loss5 and loss7 < loss6 and loss7 < loss8:
+            #     dataset_pd = 6
+            #     dataset_pred.append(dataset_pd)
+            #     class_checkpoint = torch.load("results/mlp_7-resnet18/030.pth")['state_dict']
+            # elif loss8 < loss1 and loss8 < loss2 and loss8 < loss3 and loss8 < loss4 and loss8 < loss5 and loss8 < loss6 and loss8 < loss7:
+            #     dataset_pd = 7
+            #     dataset_pred.append(dataset_pd)
+            #     class_checkpoint = torch.load("results/mlp_8-resnet18/030.pth")['state_dict']
+
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
             # if loss1 < loss2 and loss1 < loss3 and loss1 < loss4 and loss1 < loss5 and loss1 < loss6 and loss1 < loss7:
             #     dataset_pd = 0
             #     dataset_pred.append(dataset_pd)
-            #     class_checkpoint = torch.load("results/cifar_mlp_1_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_1-resnet18/030.pth")['state_dict']
             # elif loss2 < loss1 and loss2 < loss3 and loss2 < loss4 and loss2 < loss5 and loss2 < loss6 and loss2 < loss7:
             #     dataset_pd = 1
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_2_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_2-resnet18/030.pth")['state_dict']
             # elif loss3 < loss1 and loss3 < loss2 and loss3 < loss4 and loss3 < loss5 and loss3 < loss6 and loss3 < loss7:
             #     dataset_pd = 2
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_3_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_3-resnet18/030.pth")['state_dict']
             # elif loss4 < loss1 and loss4 < loss2 and loss4 < loss3 and loss4 < loss5 and loss4 < loss6 and loss4 < loss7:
             #     dataset_pd = 3
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_4_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_4-resnet18/030.pth")['state_dict']
             # elif loss5 < loss1 and loss5 < loss2 and loss5 < loss3 and loss5 < loss4 and loss5 < loss6 and loss5 < loss7:
             #     dataset_pd = 4
             #     dataset_pred.append(dataset_pd)
-            #     class_checkpoint = torch.load("results/cifar_mlp_5_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_5-resnet18/030.pth")['state_dict']
             # elif loss6 < loss1 and loss6 < loss2 and loss6 < loss3 and loss6 < loss4 and loss6 < loss5 and loss6 < loss7:
             #     dataset_pd = 5
             #     dataset_pred.append(dataset_pd)
-            #     class_checkpoint = torch.load("results/cifar_mlp_6_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_6-resnet18/030.pth")['state_dict']
             # elif loss7 < loss1 and loss7 < loss2 and loss7 < loss3 and loss7 < loss4 and loss7 < loss5 and loss7 < loss6:
             #     dataset_pd = 6
             #     dataset_pred.append(dataset_pd)
-            #     class_checkpoint = torch.load("results/cifar_mlp_7_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_7-resnet18/030.pth")['state_dict']
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-            if loss1 < loss2 and loss1 < loss3 and loss1 < loss4 and loss1 < loss5 and loss1 < loss6:
-                dataset_pd = 0
-                dataset_pred.append(dataset_pd)
-                class_checkpoint = torch.load("results/cifar_mlp_1_newAA-resnet18/100.pth")['state_dict']
-            elif loss2 < loss1 and loss2 < loss3 and loss2 < loss4 and loss2 < loss5 and loss2 < loss6:
-                dataset_pd = 1
-                dataset_pred.append(dataset_pd)  
-                class_checkpoint = torch.load("results/cifar_mlp_2_newAA-resnet18/100.pth")['state_dict']
-            elif loss3 < loss1 and loss3 < loss2 and loss3 < loss4 and loss3 < loss5 and loss3 < loss6:
-                dataset_pd = 2
-                dataset_pred.append(dataset_pd)  
-                class_checkpoint = torch.load("results/cifar_mlp_3_newAA-resnet18/100.pth")['state_dict']
-            elif loss4 < loss1 and loss4 < loss2 and loss4 < loss3 and loss4 < loss5 and loss4 < loss6:
-                dataset_pd = 3
-                dataset_pred.append(dataset_pd)  
-                class_checkpoint = torch.load("results/cifar_mlp_4_newAA-resnet18/100.pth")['state_dict']
-            elif loss5 < loss1 and loss5 < loss2 and loss5 < loss3 and loss5 < loss4 and loss5 < loss6:
-                dataset_pd = 4
-                dataset_pred.append(dataset_pd)
-                class_checkpoint = torch.load("results/cifar_mlp_5_newAA-resnet18/100.pth")['state_dict']
-            elif loss6 < loss1 and loss6 < loss2 and loss6 < loss3 and loss6 < loss4 and loss6 < loss5:
-                dataset_pd = 5
-                dataset_pred.append(dataset_pd)
-                class_checkpoint = torch.load("results/cifar_mlp_6_newAA-resnet18/100.pth")['state_dict']
+            # if loss1 < loss2 and loss1 < loss3 and loss1 < loss4 and loss1 < loss5 and loss1 < loss6:
+            #     dataset_pd = 0
+            #     dataset_pred.append(dataset_pd)
+            #     class_checkpoint = torch.load("results/mlp_1-resnet18/030.pth")['state_dict']
+            # elif loss2 < loss1 and loss2 < loss3 and loss2 < loss4 and loss2 < loss5 and loss2 < loss6:
+            #     dataset_pd = 1
+            #     dataset_pred.append(dataset_pd)  
+            #     class_checkpoint = torch.load("results/mlp_2-resnet18/030.pth")['state_dict']
+            # elif loss3 < loss1 and loss3 < loss2 and loss3 < loss4 and loss3 < loss5 and loss3 < loss6:
+            #     dataset_pd = 2
+            #     dataset_pred.append(dataset_pd)  
+            #     class_checkpoint = torch.load("results/mlp_3-resnet18/030.pth")['state_dict']
+            # elif loss4 < loss1 and loss4 < loss2 and loss4 < loss3 and loss4 < loss5 and loss4 < loss6:
+            #     dataset_pd = 3
+            #     dataset_pred.append(dataset_pd)  
+            #     class_checkpoint = torch.load("results/mlp_4-resnet18/030.pth")['state_dict']
+            # elif loss5 < loss1 and loss5 < loss2 and loss5 < loss3 and loss5 < loss4 and loss5 < loss6:
+            #     dataset_pd = 4
+            #     dataset_pred.append(dataset_pd)
+            #     class_checkpoint = torch.load("results/mlp_5-resnet18/030.pth")['state_dict']
+            # elif loss6 < loss1 and loss6 < loss2 and loss6 < loss3 and loss6 < loss4 and loss6 < loss5:
+            #     dataset_pd = 5
+            #     dataset_pred.append(dataset_pd)
+            #     class_checkpoint = torch.load("results/mlp_6-resnet18/030.pth")['state_dict']
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
             # if loss1 < loss2 and loss1 < loss3 and loss1 < loss4 and loss1 < loss5:
             #     dataset_pd = 0
             #     dataset_pred.append(dataset_pd)
-            #     class_checkpoint = torch.load("results/cifar_mlp_1_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_1-resnet18/030.pth")['state_dict']
             # elif loss2 < loss1 and loss2 < loss3 and loss2 < loss4 and loss2 < loss5:
             #     dataset_pd = 1
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_2_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_2-resnet18/030.pth")['state_dict']
             # elif loss3 < loss1 and loss3 < loss2 and loss3 < loss4 and loss3 < loss5:
             #     dataset_pd = 2
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_3_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_3-resnet18/030.pth")['state_dict']
             # elif loss4 < loss1 and loss4 < loss2 and loss4 < loss3 and loss4 < loss5:
             #     dataset_pd = 3
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_4_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_4-resnet18/030.pth")['state_dict']
             # elif loss5 < loss1 and loss5 < loss2 and loss5 < loss3 and loss5 < loss4:
             #     dataset_pd = 4
             #     dataset_pred.append(dataset_pd)
-            #     class_checkpoint = torch.load("results/cifar_mlp_5_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_5-resnet18/030.pth")['state_dict']
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -256,44 +343,44 @@ def main(args):
             # if loss1 < loss2 and loss1 < loss3 and loss1 < loss4:
             #     dataset_pd = 0
             #     dataset_pred.append(dataset_pd)
-            #     class_checkpoint = torch.load("results/cifar_mlp_1_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_1-resnet18/030.pth")['state_dict']
             # elif loss2 < loss1 and loss2 < loss3 and loss2 < loss4:
             #     dataset_pd = 1
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_2_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_2-resnet18/030.pth")['state_dict']
             # elif loss3 < loss1 and loss3 < loss2 and loss3 < loss4:
             #     dataset_pd = 2
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_3_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_3-resnet18/030.pth")['state_dict']
             # elif loss4 < loss1 and loss4 < loss2 and loss4 < loss3:
             #     dataset_pd = 3
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_4_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_4-resnet18/030.pth")['state_dict']
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
             # if loss1 < loss2 and loss1 < loss3:
             #     dataset_pd = 0
             #     dataset_pred.append(dataset_pd)
-            #     class_checkpoint = torch.load("results/cifar_mlp_1_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_1-resnet18/030.pth")['state_dict']
             # elif loss2 < loss1 and loss2 < loss3:
             #     dataset_pd = 1
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_2_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_2-resnet18/030.pth")['state_dict']
             # elif loss3 < loss1 and loss3 < loss2:
             #     dataset_pd = 2
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_3_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_3-resnet18/030.pth")['state_dict']
             
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
             # if loss1 < loss2:
             #     dataset_pd = 0
             #     dataset_pred.append(dataset_pd)
-            #     class_checkpoint = torch.load("results/cifar_mlp_1_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_1-resnet18/030.pth")['state_dict']
             # elif loss2 < loss1:
             #     dataset_pd = 1
             #     dataset_pred.append(dataset_pd)  
-            #     class_checkpoint = torch.load("results/cifar_mlp_2_newAA-resnet18/100.pth")['state_dict']
+            #     class_checkpoint = torch.load("results/mlp_2-resnet18/030.pth")['state_dict']
 
             dataset_gt.append(dataset_number.item())
 

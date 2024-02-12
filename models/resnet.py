@@ -24,14 +24,15 @@ class ResNetAutoEncoder(nn.Module):
 
     """This Runs an Autoencoder Model"""
 
-    def __init__(self, configs, bottleneck, args):
+    def __init__(self):
 
         super(ResNetAutoEncoder, self).__init__()
 
         self.encoder = nn.Sequential(OrderedDict([*(list(resnet18(pretrained=True).named_children())[:-2])]))
-        
+
         for param in self.encoder.parameters():
             param.requires_grad = False
+        # self.encoder.eval()
         
         # self.decoder = nn.Sequential(
         #         nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1, bias=False),
@@ -107,6 +108,7 @@ class ResNetAutoEncoder(nn.Module):
                 nn.Linear(in_features=512, out_features=768),
                 nn.BatchNorm1d(768),  
                 nn.ReLU(),
+                # nn.Dropout(0.2),
 
                 nn.Linear(in_features=768, out_features=1024),
                 nn.BatchNorm1d(1024),
@@ -116,8 +118,10 @@ class ResNetAutoEncoder(nn.Module):
                 nn.Linear(in_features=1024, out_features=768),
                 nn.BatchNorm1d(768),  
                 nn.ReLU(),
+                # nn.Dropout(0.2),
 
                 nn.Linear(in_features=768, out_features=512),
+                nn.ReLU()
         )
 
         # self.decoder = nn.Sequential(

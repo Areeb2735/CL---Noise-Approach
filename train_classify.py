@@ -21,6 +21,9 @@ from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 from torchinfo import summary
 
+# set seed
+torch.manual_seed(0)
+torch.cuda.manual_seed(0)
 
 import wandb
 
@@ -122,7 +125,7 @@ def main_worker(gpu, args):
         NameError('Dataset not found')
     
     model = builder.BuildClassfy(args, utils.medmnist_dataset_to_target(args.dataset, args.medmnist_task_id))
-    # checkpoint = torch.load('results/noisy_latent_1_unfrozen-resnet18/100.pth')['state_dict']
+    # checkpoint = torch.load('results/unfrozen_encoder_0-resnet18/100.pth')['state_dict']
     # encoder_state_dict = {key: value for key, value in checkpoint.items() if key.startswith('module.encoder')}
     # new_state_dict = {key.replace('module.encoder.', ''): value for key, value in encoder_state_dict.items()}
 
@@ -275,6 +278,7 @@ def do_train(train_loader, model, criterion, optimizer, epoch, args):
         prefix="Epoch: [{}]".format(epoch+1))
     end = time.time()
 
+    model.train()
     # update lr
     learning_rate.update(current_lr)
     total_steps = len(train_loader)

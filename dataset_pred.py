@@ -142,6 +142,10 @@ def main(args):
             mean_3.append(output_3.mean().item())
             # mean_4.append(output_4.mean().item())
 
+            # loss1 = criterion(output_1, noise_1.transpose(0, 1))
+            # loss2 = criterion(output_2, noise_2.transpose(0, 1))
+            # loss3 = criterion(output_3, noise_3.transpose(0, 1))
+
             loss1 = criterion(torch.mean(output_1, dim=(1)), torch.mean(noise_1.transpose(0, 1), dim=(1)))       ######
             loss2 = criterion(torch.mean(output_2, dim=(1)), torch.mean(noise_2.transpose(0, 1), dim=(1)))         ######
             loss3 = criterion(torch.mean(output_3, dim=(1)), torch.mean(noise_3.transpose(0, 1), dim=(1)))         ######
@@ -151,6 +155,11 @@ def main(args):
             # loss1 = criterion(torch.mean(output_1, dim=(1,2,3)), torch.mean(noise_1, dim=(1,2,3)))     
             # loss2 = criterion(torch.mean(output_2, dim=(1,2,3)), torch.mean(noise_2, dim=(1,2,3)))
             # loss3 = criterion(torch.mean(output_3, dim=(1,2,3)), torch.mean(noise_3, dim=(1,2,3)))  
+
+            # if torch.mean(loss1) < torch.mean(loss2):
+            #     pred.append(0)
+            # elif torch.mean(loss1) > torch.mean(loss2):
+            #     pred.append(1)  
 
             if loss1 < loss2:
                 pred.append(0)
