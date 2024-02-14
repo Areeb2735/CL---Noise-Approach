@@ -26,7 +26,7 @@ class NoisyDataset(datasets.cifar.CIFAR100):
         self.replay = args.replay
         self.mean = mean
         self.std = std
-        self.task_id = ((args.initclass)//10) + 1
+        self.task_id = ((args.initclass)//10) 
         if classes_subset is not None:
             self.filter_dt_classes(classes_subset)
         

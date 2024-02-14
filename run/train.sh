@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
     # --train_list list/${NAME}_list.txt \
 
@@ -23,11 +23,11 @@ python3 -u train.py \
     --workers 8 \
     --epochs 100 \
     --start-epoch 0 \
-    --batch-size 32 \
+    --batch-size 64 \
     --learning-rate 0.005 \
     --momentum 0.9 \
     --weight-decay 1e-4 \
-    --print-freq 1 \
+    --print-freq 25 \
     --pth-save-fold ${OUTPUT} \
     --pth-save-epoch 50 \
     --parallel 0 \

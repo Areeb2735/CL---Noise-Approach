@@ -153,18 +153,18 @@ class ResNetAutoEncoder(nn.Module):
         #         nn.Linear(in_features=768, out_features=512),
         # )
 
-    def forward(self, x, noise):
-        x = self.encoder(x)
-        x = self.decoder_1(x)
-        x = self.decoder_2(x.squeeze(dim=-1).squeeze(dim=-1) + noise)
-        # x = self.decoder_3(x.unsqueeze(dim=-1).unsqueeze(dim=-1))
-        return x
-
-    # def forward(self, x):
+    # def forward(self, x, noise):
     #     x = self.encoder(x)
     #     x = self.decoder_1(x)
-    #     x = self.decoder_2(x.squeeze(dim=-1).squeeze(dim=-1))
+    #     x = self.decoder_2(x.squeeze(dim=-1).squeeze(dim=-1) + noise)
+    #     # x = self.decoder_3(x.unsqueeze(dim=-1).unsqueeze(dim=-1))
     #     return x
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder_1(x)
+        x = self.decoder_2(x.squeeze(dim=-1).squeeze(dim=-1))
+        return x
 
     ## Adding Noise in the Latent
     # def forward(self, x, noise):

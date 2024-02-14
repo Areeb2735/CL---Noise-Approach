@@ -147,3 +147,10 @@ def task_weight(n):
         print(f"Value: {value}, Weight: {weight}")
     print("Mean of Adjusted Weights:", sum(numbers) / len(numbers))
     return result_dict
+
+def weight_dictionary(n):
+    if n <= 0:
+        raise ValueError("Input 'n' must be a positive integer.")
+
+    result_dict = {i: 2.5 * n if i != n - 1 else 1 for i in range(n)}
+    return result_dict
