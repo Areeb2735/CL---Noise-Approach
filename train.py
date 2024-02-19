@@ -511,9 +511,9 @@ def validate_classification(model, noise_list, task_id):
     noises = []
     if task_id > 1:
         for num in reversed(range(len(range(task_id-1)))):
-            noises.append(noise_list[num])
+            noises.append(noise_list[num].cuda(non_blocking=True))
     
-    noises.append(noise_list[task_id-1])
+    noises.append(noise_list[task_id-1].cuda(non_blocking=True))
 
     criterion = nn.L1Loss(reduction='none')
     model.eval()
