@@ -191,11 +191,11 @@ def main_worker(gpu, args):
         dataset = NoisyDataset(root = './data', noise_list = noise_list, 
                             classes_subset=list(np.arange(args.initclass, args.initclass + args.increment)), 
                             max_samples = None, transform=trsf, args=args)
-
+        
         if args.replay:
             dataset_replay = []
             for num in range(len(range(task_id-1))):
-                datasets = NoisyDataset(root = './data', mean=args.mean - ((num * mean_diff) + mean_diff), std = args.std,
+                datasets = NoisyDataset(root = './data', noise_list = noise_list,
                                     classes_subset=list(np.arange(((task_id-2-num)*10), (((task_id-2-num)*10) + args.increment))), 
                                     max_samples = 2000//(task_id-1), transform=trsf, args=args)
                 dataset_replay.append(datasets)
@@ -245,13 +245,13 @@ def main_worker(gpu, args):
             current_lr = utils.adjust_learning_rate_cosine(optimizer, epoch, args)
         
             if epoch == 0:        #### Just to check whether the weights of the previous task is loaded properly
-                do_validate(model, epoch, args, task_id, mean_diff)
+                do_validate(model, epoch, args, task_id, mean_diff, noise_list)
 
             # train for one epoch
             do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id)
 
             if (epoch+1) % args.print_freq == 0 and args.rank == 0:
-                do_validate(model, epoch, args, task_id, mean_diff)
+                do_validate(model, epoch, args, task_id, mean_diff, noise_list)
 
             # save pth
             save_path = os.path.join(args.pth_save_fold, str(task_id).zfill(2), '{}.pth'.format(str(epoch+1).zfill(3)))
@@ -291,6 +291,7 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
     total_steps = len(train_loader)
 
     for i, (image, target, added_noise, gt_noise) in enumerate(train_loader):
+       
         optimizer.zero_grad()
         data_time.update(time.time() - end)
         global iters
@@ -423,13 +424,13 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
         
         # return (epoch*total_steps +i) + g_step
 
-def do_validate(model, epoch, args, task_id, mean_diff):
+def do_validate(model, epoch, args, task_id, mean_diff, noise_list):
 
-    current_mean, current_std = validate(model, args.mean)
-    print(f"Validation - current mean = ({current_mean},{args.mean})")
+    current_mean, current_std = validate(model, noise=noise_list[task_id-1])
+    print(f"Validation - current mean = ({current_mean},{noise_list[task_id-1].mean()})")
 
     if task_id > 1:
-        accuracy, precision_recall_fscore_support = validate_classification(model, args.mean)
+        accuracy, precision_recall_fscore_support = validate_classification(model, noise_list, task_id)
         wandb.log({f"{task_id}/Validation/F1 Score/Accuracy": accuracy})
         for num in reversed(range(len(range(task_id)))):
             wandb.log({
@@ -440,24 +441,24 @@ def do_validate(model, epoch, args, task_id, mean_diff):
 
     if task_id > 1:                                                           
         for num in range(len(range(task_id-1))):
-            prev_mean, prev_stf = validate(model, args.mean-((num * mean_diff) + 1))                      
-            print(f"{task_id}/Validation - prev_mean = ({prev_mean},{args.mean-((num * mean_diff) + 1)})")          
+            prev_mean, prev_stf = validate(model, noise=noise_list[num])                      
+            print(f"{task_id}/Validation - prev_mean = ({prev_mean},{noise_list[num].mean()})")          
             wandb.log({
-            f"{task_id}/Validation/Noise/Mean after adding {args.mean - ((num * mean_diff) + 1)}": prev_mean,                         
+            f"{task_id}/Validation/Noise/Mean after adding {noise_list[num].mean()}": prev_mean,                         
             })
 
     wandb.log({
         f"{task_id}/Validation/Noise/Mean after adding {args.mean}": current_mean,
     })
 
-def validate(model, test_noise_mean):
+def validate(model, noise):
 
     test_transform = transforms.Compose([
         transforms.Resize((224,224)),
         transforms.ToTensor(),
     ])
     
-    val_dataset = NoisyDataset_test(root = './data', mean=test_noise_mean, std = args.std, 
+    val_dataset = NoisyDataset_test(root = './data', noise = noise, 
                            classes_subset=list(np.arange(args.initclass, args.initclass + args.increment)), 
                            max_samples = None, train = False, transform=test_transform)
     val_loader = DataLoader(
@@ -477,7 +478,6 @@ def validate(model, test_noise_mean):
             image = image.cuda(non_blocking=True)
             target = target.cuda(non_blocking=True)
             noise = noise.cuda(non_blocking=True)
-            # noise = noise_list[task_id-1]
 
             # noise_pad = utils.pad_noise(noise)
             
@@ -489,14 +489,14 @@ def validate(model, test_noise_mean):
     # print(concat_pred_noises.shape)
     return torch.mean(concat_pred_noises), torch.std(concat_pred_noises)
 
-def validate_classification(model, test_noise_mean, task_id):
+def validate_classification(model, noise_list, task_id):
 
     test_transform = transforms.Compose([
         transforms.Resize((224,224)),
         transforms.ToTensor(),
     ])
 
-    val_dataset = NoisyDataset_test(root = './data', mean=test_noise_mean, std = args.std, 
+    val_dataset = NoisyDataset_test(root = './data', noise = noise_list, 
                            classes_subset=list(np.arange(0, task_id*10)), 
                            max_samples = None, train = False, transform=test_transform)
     val_loader = DataLoader(
@@ -511,9 +511,9 @@ def validate_classification(model, test_noise_mean, task_id):
     noises = []
     if task_id > 1:
         for num in reversed(range(len(range(task_id-1)))):
-            noises.append(torch.normal(test_noise_mean-(num + 1), 0.1, size=(512,1)).cuda(non_blocking=True))
+            noises.append(noise_list[num])
     
-    noises.append(torch.normal(test_noise_mean, 0.1, size=(512,1)).cuda(non_blocking=True))
+    noises.append(noise_list[task_id-1])
 
     criterion = nn.L1Loss(reduction='none')
     model.eval()

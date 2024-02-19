@@ -46,7 +46,10 @@ class NoisyDataset(datasets.cifar.CIFAR100):
         img, label = super().__getitem__(index)
 
         gt_noise = self.noise_list[self.task_id]
-        other_noise = random.choice(self.noise_list[:self.task_id])
+        try: # NOTE: This is to handle the case when the task_id is 0
+            other_noise = random.choice(self.noise_list[:self.task_id+1])
+        except:
+            other_noise = gt_noise
   
         if random.uniform(0,1) > 0.5:
             added_noise = other_noise
@@ -59,8 +62,7 @@ class NoisyDataset(datasets.cifar.CIFAR100):
 class NoisyDataset_test(datasets.cifar.CIFAR100):
     def __init__(self, 
                  root: str, 
-                 mean: float,
-                 std: float,
+                 noise : torch.Tensor,
                  classes_subset: None,
                  max_samples: None,
                  train: bool = False, 
@@ -73,8 +75,8 @@ class NoisyDataset_test(datasets.cifar.CIFAR100):
                          target_transform, 
                          download)
 
-        self.mean = mean
-        self.std = std
+        self.noise = noise
+
         if classes_subset is not None:
             self.filter_dt_classes(classes_subset)
         
@@ -99,7 +101,7 @@ class NoisyDataset_test(datasets.cifar.CIFAR100):
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         img, label = super().__getitem__(index)
-        gt_noise = torch.normal(self.mean, self.std, size=(512,1))       ######
+        gt_noise = self.noise       ######
         # img = img + gt_noise
         return img, label, gt_noise.squeeze(-1)
 
