@@ -429,7 +429,7 @@ def do_validate(model, epoch, args, task_id, mean_diff):
     print(f"Validation - current mean = ({current_mean},{args.mean})")
 
     if task_id > 1:
-        accuracy, precision_recall_fscore_support = validate_classification(model, args.mean)
+        accuracy, precision_recall_fscore_support = validate_classification(model, args.mean, task_id)
         wandb.log({f"{task_id}/Validation/F1 Score/Accuracy": accuracy})
         for num in reversed(range(len(range(task_id)))):
             wandb.log({
