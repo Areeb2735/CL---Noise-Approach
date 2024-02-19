@@ -496,7 +496,7 @@ def validate_classification(model, noise_list, task_id):
         transforms.ToTensor(),
     ])
 
-    val_dataset = NoisyDataset_test(root = './data', noise = noise_list, 
+    val_dataset = NoisyDataset_test(root = './data', noise = noise_list[task_id], 
                            classes_subset=list(np.arange(0, task_id*10)), 
                            max_samples = None, train = False, transform=test_transform)
     val_loader = DataLoader(
