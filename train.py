@@ -134,23 +134,23 @@ def main_worker(gpu, args):
     mean_diff = 1
     args.replay = False
 
-    # added_noise_1 = torch.normal(0.5, 0.1, size=(512,1))
-    # added_noise_2 = torch.normal(1.5, 0.1, size=(512,1))
-    # added_noise_3 = torch.normal(2.5, 0.1, size=(512,1))
-    # added_noise_4 = torch.normal(3.5, 0.1, size=(512,1))
-    # added_noise_5 = torch.normal(4.5, 0.1, size=(512,1))
-    # added_noise_6 = torch.normal(5.5, 0.1, size=(512,1))
-    # added_noise_7 = torch.normal(6.5, 0.1, size=(512,1))
-    # added_noise_8 = torch.normal(7.5, 0.1, size=(512,1))
-    # added_noise_9 = torch.normal(8.5, 0.1, size=(512,1))
-    # added_noise_10 = torch.normal(9.5, 0.1, size=(512,1))
-    # noise_list = [added_noise_1, added_noise_2, added_noise_3, added_noise_4, added_noise_5, added_noise_6, added_noise_7, added_noise_8, added_noise_9, added_noise_10]
+    added_noise_1 = torch.normal(0.5, 0.1, size=(512,1))
+    added_noise_2 = torch.normal(1.5, 0.1, size=(512,1))
+    added_noise_3 = torch.normal(2.5, 0.1, size=(512,1))
+    added_noise_4 = torch.normal(3.5, 0.1, size=(512,1))
+    added_noise_5 = torch.normal(4.5, 0.1, size=(512,1))
+    added_noise_6 = torch.normal(5.5, 0.1, size=(512,1))
+    added_noise_7 = torch.normal(6.5, 0.1, size=(512,1))
+    added_noise_8 = torch.normal(7.5, 0.1, size=(512,1))
+    added_noise_9 = torch.normal(8.5, 0.1, size=(512,1))
+    added_noise_10 = torch.normal(9.5, 0.1, size=(512,1))
+    noise_list = [added_noise_1, added_noise_2, added_noise_3, added_noise_4, added_noise_5, added_noise_6, added_noise_7, added_noise_8, added_noise_9, added_noise_10]
 
     for k in range(10):
         print(f"Start of Task number: {((k * 10)//10)+1}")
         print(f"Start of Class number: {k*10}")
-        print(f"Mean: {args.mean}")
-        print(f"Std: {args.std}")
+        print(f"Mean: {noise_list[k].mean()}")
+        print(f"Std: {noise_list[k].std()}")
 
         args.initclass = k*10
         task_id = ((args.initclass)//10)+1
@@ -188,7 +188,7 @@ def main_worker(gpu, args):
         transforms.ToTensor(),
         ])
         
-        dataset = NoisyDataset(root = './data', mean=args.mean, std = args.std, 
+        dataset = NoisyDataset(root = './data', noise_list = noise_list, 
                             classes_subset=list(np.arange(args.initclass, args.initclass + args.increment)), 
                             max_samples = None, transform=trsf, args=args)
 

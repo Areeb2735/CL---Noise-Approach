@@ -8,8 +8,7 @@ from medmnist.dataset import PathMNIST, BloodMNIST, TissueMNIST, OrganAMNIST
 class NoisyDataset(datasets.cifar.CIFAR100):
     def __init__(self, 
                  root: str, 
-                 mean: float,
-                 std: float,
+                 noise_list: list,
                  args: None,
                  classes_subset: None,
                  max_samples: None,
@@ -24,8 +23,7 @@ class NoisyDataset(datasets.cifar.CIFAR100):
                          download)
 
         self.replay = args.replay
-        self.mean = mean
-        self.std = std
+        self.noise_list = noise_list
         self.task_id = ((args.initclass)//10) 
         if classes_subset is not None:
             self.filter_dt_classes(classes_subset)
@@ -47,156 +45,9 @@ class NoisyDataset(datasets.cifar.CIFAR100):
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         img, label = super().__getitem__(index)
 
-        size = (512,1)
-        # size = (512,7,7,1)
-
-        gt_noise = torch.normal(self.mean, self.std, size=size)
-
-        if self.task_id == 0 or self.task_id == 1:
-            if self.mean == 1.5:
-                other_noise = torch.normal(random.choice([0.5]), self.std, size=size)
-            elif self.mean == 0.5 and self.replay:
-                other_noise = torch.normal(random.choice([1.5]), self.std, size=size)
-            else:
-                other_noise = torch.normal(random.choice([0.5]), self.std, size=size)
-
-        elif self.task_id == 2:
-            if self.mean == 2.5:                                                            
-                other_noise = torch.normal(random.choice([0.5, 1.5]), self.std, size=size)  
-            elif self.mean == 0.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([1.5, 2.5]), self.std, size=size) 
-            elif self.mean == 1.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 2.5]), self.std, size=size) 
-            else:
-                other_noise = torch.normal(random.choice([0.5]), self.std, size=size) 
-
-        elif self.task_id == 3:
-            if self.mean == 3.5:                                                            
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5]), self.std, size=size)  
-            elif self.mean == 0.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([1.5, 2.5, 3.5]), self.std, size=size) 
-            elif self.mean == 1.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 2.5, 3.5]), self.std, size=size) 
-            elif self.mean == 2.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 3.5]), self.std, size=size) 
-            else:
-                other_noise = torch.normal(random.choice([0.5]), self.std, size=size) 
-
-        elif self.task_id == 4:
-            if self.mean == 4.5:                                                            
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5]), self.std, size=size)  
-            elif self.mean == 0.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([1.5, 2.5, 3.5, 4.5]), self.std, size=size) 
-            elif self.mean == 1.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 2.5, 3.5, 4.5]), self.std, size=size) 
-            elif self.mean == 2.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 3.5, 4.5]), self.std, size=size) 
-            elif self.mean == 3.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 4.5]), self.std, size=size) 
-            else:
-                other_noise = torch.normal(random.choice([0.5]), self.std, size=size) 
-
-        elif self.task_id == 5:
-            if self.mean == 5.5:                                                            
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5]), self.std, size=size)  
-            elif self.mean == 0.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([1.5, 2.5, 3.5, 4.5, 5.5]), self.std, size=size) 
-            elif self.mean == 1.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 2.5, 3.5, 4.5, 5.5]), self.std, size=size) 
-            elif self.mean == 2.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 3.5, 4.5, 5.5]), self.std, size=size) 
-            elif self.mean == 3.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 4.5, 5.5]), self.std, size=size) 
-            elif self.mean == 4.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 5.5]), self.std, size=size) 
-            else:
-                other_noise = torch.normal(random.choice([0.5]), self.std, size=size) 
-
-        elif self.task_id == 6:
-            if self.mean == 6.5:                                                            
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]), self.std, size=size)  
-            elif self.mean == 0.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([1.5, 2.5, 3.5, 4.5, 5.5, 6.5]), self.std, size=size) 
-            elif self.mean == 1.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 2.5, 3.5, 4.5, 5.5, 6.5]), self.std, size=size) 
-            elif self.mean == 2.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 3.5, 4.5, 5.5, 6.5]), self.std, size=size) 
-            elif self.mean == 3.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 4.5, 5.5, 6.5]), self.std, size=size) 
-            elif self.mean == 4.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 5.5, 6.5]), self.std, size=size) 
-            elif self.mean == 5.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 6.5]), self.std, size=size) 
-            else:
-                other_noise = torch.normal(random.choice([0.5]), self.std, size=size) 
-            
-        elif self.task_id == 7:
-            if self.mean == 7.5:
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5]), self.std, size=size) 
-            elif self.mean == 0.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]), self.std, size=size) 
-            elif self.mean == 1.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]), self.std, size=size) 
-            elif self.mean == 2.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 3.5, 4.5, 5.5, 6.5, 7.5]), self.std, size=size) 
-            elif self.mean == 3.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 4.5, 5.5, 6.5, 7.5]), self.std, size=size) 
-            elif self.mean == 4.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 5.5, 6.5, 7.5]), self.std, size=size) 
-            elif self.mean == 5.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 6.5, 7.5]), self.std, size=size) 
-            elif self.mean == 6.5 and self.replay:                                                            
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 7.5]), self.std, size=size) 
-            else:
-                other_noise = torch.normal(random.choice([0.5]), self.std, size=size) 
-            
-        elif self.task_id == 8:
-            if self.mean == 8.5:
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]), self.std, size=size) 
-            elif self.mean == 0.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]), self.std, size=size) 
-            elif self.mean == 1.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]), self.std, size=size) 
-            elif self.mean == 2.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]), self.std, size=size) 
-            elif self.mean == 3.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 4.5, 5.5, 6.5, 7.5, 8.5]), self.std, size=size) 
-            elif self.mean == 4.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 5.5, 6.5, 7.5, 8.5]), self.std, size=size) 
-            elif self.mean == 5.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 6.5, 7.5, 8.5]), self.std, size=size) 
-            elif self.mean == 6.5 and self.replay:                                                            
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 7.5, 8.5]), self.std, size=size) 
-            elif self.mean == 7.5 and self.replay:
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 8.5]), self.std, size=size) 
-            else:
-                other_noise = torch.normal(random.choice([0.5]), self.std, size=size) 
-            
-        elif self.task_id == 9:
-            if self.mean == 9.5:
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]), self.std, size=size) 
-            elif self.mean == 0.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5]), self.std, size=size) 
-            elif self.mean == 1.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5]), self.std, size=size) 
-            elif self.mean == 2.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5]), self.std, size=size) 
-            elif self.mean == 3.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5]), self.std, size=size) 
-            elif self.mean == 4.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 5.5, 6.5, 7.5, 8.5, 9.5]), self.std, size=size) 
-            elif self.mean == 5.5 and self.replay:                                        
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 6.5, 7.5, 8.5, 9.5]), self.std, size=size) 
-            elif self.mean == 6.5 and self.replay:                                                            
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 7.5, 8.5, 9.5]), self.std, size=size) 
-            elif self.mean == 7.5 and self.replay:
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 8.5, 9.5]), self.std, size=size) 
-            if self.mean == 8.5 and self.replay:
-                other_noise = torch.normal(random.choice([0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 9.5]), self.std, size=size) 
-            else:
-                other_noise = torch.normal(random.choice([0.5]), self.std, size=size) 
-            
-            
+        gt_noise = self.noise_list[self.task_id]
+        other_noise = random.choice(self.noise_list[:self.task_id])
+  
         if random.uniform(0,1) > 0.5:
             added_noise = other_noise
         else:
