@@ -225,4 +225,4 @@ if __name__ == '__main__':
     args = get_args()
     main(args)
 
-# CUDA_VISIBLE_DEVICES=0 python pipeline.py --arch resnet18 --resume results/incremnet_2_0.5-resnet18/100.pth --initclass 0 --increment 20
+# CUDA_VISIBLE_DEVICES=0 python pipeline_2.py --arch resnet18 --checkpoint 

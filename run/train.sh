@@ -23,7 +23,7 @@ python3 -u train.py \
     --workers 8 \
     --epochs 100 \
     --start-epoch 0 \
-    --batch-size 64 \
+    --batch-size 32 \
     --learning-rate 0.005 \
     --momentum 0.9 \
     --weight-decay 1e-4 \

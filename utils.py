@@ -148,9 +148,15 @@ def task_weight(n):
     print("Mean of Adjusted Weights:", sum(numbers) / len(numbers))
     return result_dict
 
-def weight_dictionary(n):
+def weight_dictionary(n, exponential_factor=1.6):
     if n <= 0:
         raise ValueError("Input 'n' must be a positive integer.")
 
-    result_dict = {i: 2.5 * n if i != n - 1 else 1 for i in range(n)}
+    # result_dict = {i: 2.5 * (n-1) if i != n - 1 else 1 for i in range(n)}
+    result_dict = {i: 2.5 * (n-1) * (exponential_factor ** (n-1-i)) if i != n - 1 else 1 for i in range(n)}
     return result_dict
+
+def pad_noise(original_tensor):
+    desired_size = 512
+    num_zeros_to_pad = desired_size - original_tensor.size(1)
+    return torch.nn.functional.pad(original_tensor, (num_zeros_to_pad, 0), mode='constant', value=0)

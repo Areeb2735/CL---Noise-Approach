@@ -134,6 +134,18 @@ def main_worker(gpu, args):
     mean_diff = 1
     args.replay = False
 
+    # added_noise_1 = torch.normal(0.5, 0.1, size=(512,1))
+    # added_noise_2 = torch.normal(1.5, 0.1, size=(512,1))
+    # added_noise_3 = torch.normal(2.5, 0.1, size=(512,1))
+    # added_noise_4 = torch.normal(3.5, 0.1, size=(512,1))
+    # added_noise_5 = torch.normal(4.5, 0.1, size=(512,1))
+    # added_noise_6 = torch.normal(5.5, 0.1, size=(512,1))
+    # added_noise_7 = torch.normal(6.5, 0.1, size=(512,1))
+    # added_noise_8 = torch.normal(7.5, 0.1, size=(512,1))
+    # added_noise_9 = torch.normal(8.5, 0.1, size=(512,1))
+    # added_noise_10 = torch.normal(9.5, 0.1, size=(512,1))
+    # noise_list = [added_noise_1, added_noise_2, added_noise_3, added_noise_4, added_noise_5, added_noise_6, added_noise_7, added_noise_8, added_noise_9, added_noise_10]
+
     for k in range(10):
         print(f"Start of Task number: {((k * 10)//10)+1}")
         print(f"Start of Class number: {k*10}")
@@ -151,8 +163,8 @@ def main_worker(gpu, args):
             checkpoint = torch.load(f"{args.pth_save_fold}{str(task_id-1).zfill(2)}/100.pth")['state_dict']
             model.load_state_dict(checkpoint)
 
-        # summary(model.cuda(), [(args.batch_size,3,224,224),(args.batch_size,512)], col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
-        summary(model.cuda(), (args.batch_size,3,224,224), col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
+        summary(model.cuda(), [(args.batch_size,3,224,224),(args.batch_size,512)], col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
+        # summary(model.cuda(), (args.batch_size,3,224,224), col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
 
         if args.rank == 0:       
             total_params = sum(p.numel() for p in model.parameters())
@@ -289,8 +301,14 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
         added_noise = added_noise.cuda(non_blocking=True)
         gt_noise = gt_noise.cuda(non_blocking=True)
 
-        # output = model(image, added_noise)
-        output = model(image)
+        # added_noise = random.choice(noise_list[:task_id - 1])
+        # gt_noise = noise_list[task_id-1]
+
+        # added_noise_pad = utils.pad_noise(added_noise)
+        # gt_noise_pad = utils.pad_noise(gt_noise)
+
+        output = model(image, added_noise)
+        # output = model(image)
 
         # print("Images from Different Datasets", np.unique((target // args.increment).cpu(), return_counts=True)[1])
 
@@ -316,13 +334,13 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
         # weights_value = utils.task_weight(((args.initclass)//10))
         # weights_value = { 2: weight_2, 1: weight_1, 0: weight_0}
 
-        weights_value = utils.weight_dictionary(task_id)
+        # weights_value = utils.weight_dictionary(task_id, exponential_factor=1.6)
 
-        print("Weight Value of datasets: ", weights_value)
+        # print("Weight Value of datasets: ", weights_value)
 
-        adjusted_weights_list = []
-        for value in (target // args.increment):
-            adjusted_weights_list.append(weights_value[int(value.item())])
+        # adjusted_weights_list = []
+        # for value in (target // args.increment):
+        #     adjusted_weights_list.append(weights_value[int(value.item())])
         
         # loss1 = criterion(output - (target // args.increment).view(args.batch_size, 1),
         #                     gt_noise - (target // args.increment).view(args.batch_size, 1))
@@ -332,8 +350,8 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
         # loss1_up = torch.mul(torch.mean(loss1, axis=(1)),  torch.tensor(adjusted_weights_list).cuda())
         # loss1_mean = torch.mean(loss1)
         loss1 = criterion(output, gt_noise)
-        loss1_up = torch.mul(torch.mean(loss1, axis=(1)),  torch.tensor(adjusted_weights_list).cuda())
-        loss1_mean = torch.mean(loss1_up)
+        # loss1_up = torch.mul(torch.mean(loss1, axis=(1)),  torch.tensor(adjusted_weights_list).cuda())
+        loss1_mean = torch.mean(loss1)
 
 
         # loss2 = criterion(torch.floor(torch.mean(output, dim=(1))), torch.floor(torch.mean(gt_noise, dim=(1))))
@@ -411,7 +429,7 @@ def do_validate(model, epoch, args, task_id, mean_diff):
     print(f"Validation - current mean = ({current_mean},{args.mean})")
 
     if task_id > 1:
-        accuracy, precision_recall_fscore_support = validate_classification(model, args.mean, task_id)
+        accuracy, precision_recall_fscore_support = validate_classification(model, args.mean)
         wandb.log({f"{task_id}/Validation/F1 Score/Accuracy": accuracy})
         for num in reversed(range(len(range(task_id)))):
             wandb.log({
@@ -459,9 +477,12 @@ def validate(model, test_noise_mean):
             image = image.cuda(non_blocking=True)
             target = target.cuda(non_blocking=True)
             noise = noise.cuda(non_blocking=True)
+            # noise = noise_list[task_id-1]
+
+            # noise_pad = utils.pad_noise(noise)
             
-            # output = model(image, noise)
-            output = model(image)
+            output = model(image, noise)
+            # output = model(image)
             pred_noises.append(torch.mean(output, dim=(1)).detach().cpu())        
     
     concat_pred_noises = torch.cat(pred_noises)
@@ -509,8 +530,14 @@ def validate_classification(model, test_noise_mean, task_id):
 
             losses = []
             for idx, noise in enumerate(noises):
-                # output = model(image, noise.transpose(0, 1))
-                output = model(image)
+
+                # noise = utils.pad_noise(noise)
+
+                # noise_pad = utils.pad_noise(noise.transpose(0, 1))
+
+                output = model(image, noise)
+                # output = model(image, noise_pad)
+                # output = model(image)
 
                 loss = criterion(torch.mean(output, dim=(1)), torch.mean(noise.transpose(0, 1), dim=(1)))
                 losses.append(loss)
