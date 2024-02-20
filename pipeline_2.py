@@ -100,7 +100,7 @@ def main(args):
     
         val_dataset = dataset_all(root = './data', 
                             classes_subset=list(np.arange(args.initclass, args.initclass + args.increment + (k * 10))), 
-                            train = False, transform=trsf)
+                            train = True, transform=trsf)
     
         val_loader = DataLoader(
                 val_dataset,
@@ -128,10 +128,10 @@ def main(args):
     
         noises = []
         for num in reversed(range(len(range(task_id-1)))):  # We need to add noise for all the previous tasks
-            noises.append(torch.normal(args.mean-(num + 1), 0.1, size=(512,1)).cuda(non_blocking=True))
+            noises.append(torch.normal(args.mean-(num + 1), 0.1, size=(32,1)).cuda(non_blocking=True))
             print(f"Mean: {args.mean-(num + 1)}")
         
-        noises.append(torch.normal(args.mean, 0.1, size=(512,1)).cuda(non_blocking=True))
+        noises.append(torch.normal(args.mean, 0.1, size=(32,1)).cuda(non_blocking=True))
 
         dataset_pred = []
         dataset_gt = []
@@ -147,7 +147,9 @@ def main(args):
 
                 losses = []
                 for noise in noises:
-                    output = recons_model(image, noise.transpose(0, 1))
+                    noise_pad = utils.pad_noise(noise.transpose(0, 1))
+                    output = recons_model(image, noise_pad)
+                    # output = recons_model(image, noise.transpose(0, 1))
                     # output = recons_model(image)
                     losses.append(criterion(torch.mean(output, dim=(1)), torch.mean(noise.transpose(0, 1), dim=(1))))
                 
@@ -207,7 +209,7 @@ def main(args):
         plt.title('Confusion Matrix for Dataset')
         plt.xlabel('Predicted labels')
         plt.ylabel('True labels')
-        plt.savefig(os.path.join(os.path.dirname(os. path.join(args.checkpoint, str(task_id).zfill(2), '')), 'confusion_matrix_dataset.png'))
+        # plt.savefig(os.path.join(os.path.dirname(os. path.join(args.checkpoint, str(task_id).zfill(2), '')), 'confusion_matrix_dataset.png'))
         plt.show()
 
         # Plot and save confusion matrix for classes
@@ -216,7 +218,7 @@ def main(args):
         plt.title('Confusion Matrix for Classes')
         plt.xlabel('Predicted labels')
         plt.ylabel('True labels')
-        plt.savefig(os.path.join(os.path.dirname(os. path.join(args.checkpoint, str(task_id).zfill(2), '')), 'confusion_matrix_classes.png'))
+        # plt.savefig(os.path.join(os.path.dirname(os. path.join(args.checkpoint, str(task_id).zfill(2), '')), 'confusion_matrix_classes.png'))
         plt.show()
 
 
