@@ -147,6 +147,7 @@ def main_worker(gpu, args):
     noise_list = [added_noise_1, added_noise_2, added_noise_3, added_noise_4, added_noise_5, added_noise_6, added_noise_7, added_noise_8, added_noise_9, added_noise_10]
 
     for k in range(10):
+        # k=8
         print(f"Start of Task number: {((k * 10)//10)+1}")
         print(f"Start of Class number: {k*10}")
         print(f"Mean: {noise_list[k].mean()}")
@@ -188,20 +189,19 @@ def main_worker(gpu, args):
         transforms.ToTensor(),
         ])
         
-        dataset = NoisyDataset(root = './data', noise_list = noise_list, 
+        dataset = NoisyDataset(root = './data', noise_list = noise_list, noise=noise_list[task_id-1],
                             classes_subset=list(np.arange(args.initclass, args.initclass + args.increment)), 
                             max_samples = None, transform=trsf, args=args)
         
         if args.replay:
             dataset_replay = []
             for num in range(len(range(task_id-1))):
-                datasets = NoisyDataset(root = './data', noise_list = noise_list,
+                datasets = NoisyDataset(root = './data', noise_list = noise_list, noise = noise_list[task_id - 2 - num],
                                     classes_subset=list(np.arange(((task_id-2-num)*10), (((task_id-2-num)*10) + args.increment))), 
                                     max_samples = 2000//(task_id-1), transform=trsf, args=args)
                 dataset_replay.append(datasets)
-                print(num, args.mean - ((num * mean_diff) + mean_diff), (task_id-2-num)*10, 2000//(task_id-1))
+                print(num, noise_list[task_id - 2 - num].mean(), (task_id-2-num)*10, 2000//(task_id-1))
             
-            # breakpoint()
             dataset_replay.append(dataset)
 
             con_datatset = ConcatDataset(dataset_replay)
@@ -335,13 +335,13 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
         # weights_value = utils.task_weight(((args.initclass)//10))
         # weights_value = { 2: weight_2, 1: weight_1, 0: weight_0}
 
-        # weights_value = utils.weight_dictionary(task_id, exponential_factor=1.6)
+        weights_value = utils.weight_dictionary(task_id, exponential_factor=1.6)
 
         # print("Weight Value of datasets: ", weights_value)
 
-        # adjusted_weights_list = []
-        # for value in (target // args.increment):
-        #     adjusted_weights_list.append(weights_value[int(value.item())])
+        adjusted_weights_list = []
+        for value in (target // args.increment):
+            adjusted_weights_list.append(weights_value[int(value.item())])
         
         # loss1 = criterion(output - (target // args.increment).view(args.batch_size, 1),
         #                     gt_noise - (target // args.increment).view(args.batch_size, 1))
@@ -351,8 +351,8 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
         # loss1_up = torch.mul(torch.mean(loss1, axis=(1)),  torch.tensor(adjusted_weights_list).cuda())
         # loss1_mean = torch.mean(loss1)
         loss1 = criterion(output, gt_noise)
-        # loss1_up = torch.mul(torch.mean(loss1, axis=(1)),  torch.tensor(adjusted_weights_list).cuda())
-        loss1_mean = torch.mean(loss1)
+        loss1_up = torch.mul(torch.mean(loss1, axis=(1)),  torch.tensor(adjusted_weights_list).cuda())
+        loss1_mean = torch.mean(loss1_up)
 
 
         # loss2 = criterion(torch.floor(torch.mean(output, dim=(1))), torch.floor(torch.mean(gt_noise, dim=(1))))
@@ -480,7 +480,7 @@ def validate(model, noise):
             noise = noise.cuda(non_blocking=True)
 
             # noise_pad = utils.pad_noise(noise)
-            
+
             output = model(image, noise)
             # output = model(image)
             pred_noises.append(torch.mean(output, dim=(1)).detach().cpu())        
@@ -496,7 +496,7 @@ def validate_classification(model, noise_list, task_id):
         transforms.ToTensor(),
     ])
 
-    val_dataset = NoisyDataset_test(root = './data', noise = noise_list[task_id], 
+    val_dataset = NoisyDataset_test(root = './data', noise = noise_list[task_id - 1], 
                            classes_subset=list(np.arange(0, task_id*10)), 
                            max_samples = None, train = False, transform=test_transform)
     val_loader = DataLoader(
@@ -510,7 +510,7 @@ def validate_classification(model, noise_list, task_id):
 
     noises = []
     if task_id > 1:
-        for num in reversed(range(len(range(task_id-1)))):
+        for num in range(len(range(task_id-1))):
             noises.append(noise_list[num].cuda(non_blocking=True))
     
     noises.append(noise_list[task_id-1].cuda(non_blocking=True))
@@ -535,13 +535,13 @@ def validate_classification(model, noise_list, task_id):
 
                 # noise_pad = utils.pad_noise(noise.transpose(0, 1))
 
-                output = model(image, noise)
+                output = model(image, noise.transpose(0, 1))
                 # output = model(image, noise_pad)
                 # output = model(image)
 
                 loss = criterion(torch.mean(output, dim=(1)), torch.mean(noise.transpose(0, 1), dim=(1)))
                 losses.append(loss)
-            
+                
             pred.append(losses.index(min(losses)))
 
             gt.append(dataset_number.item())

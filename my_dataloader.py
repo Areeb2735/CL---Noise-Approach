@@ -9,6 +9,7 @@ class NoisyDataset(datasets.cifar.CIFAR100):
     def __init__(self, 
                  root: str, 
                  noise_list: list,
+                 noise: torch.tensor,
                  args: None,
                  classes_subset: None,
                  max_samples: None,
@@ -24,6 +25,7 @@ class NoisyDataset(datasets.cifar.CIFAR100):
 
         self.replay = args.replay
         self.noise_list = noise_list
+        self.noise = noise
         self.task_id = ((args.initclass)//10) 
         if classes_subset is not None:
             self.filter_dt_classes(classes_subset)
@@ -45,7 +47,7 @@ class NoisyDataset(datasets.cifar.CIFAR100):
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         img, label = super().__getitem__(index)
 
-        gt_noise = self.noise_list[self.task_id]
+        gt_noise = self.noise
         try: # NOTE: This is to handle the case when the task_id is 0
             other_noise = random.choice(self.noise_list[:self.task_id+1])
         except:
