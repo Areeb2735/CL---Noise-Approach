@@ -16,6 +16,9 @@ from torchinfo import summary
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# set seed
+torch.manual_seed(0)
+torch.cuda.manual_seed(0)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -81,17 +84,29 @@ class dataset_all(datasets.cifar.CIFAR100):
         return img, label, dataset_number
 
 def main(args):
-    #  We need to change the incremnet for each task
-    for k in range(1, 10):  # We don't need to do classification for th first tasks as there are only 1 classes.
 
+    added_noise_1 = torch.normal(0.5, 0.1, size=(512,1))
+    added_noise_2 = torch.normal(1.5, 0.1, size=(512,1))
+    added_noise_3 = torch.normal(2.5, 0.1, size=(512,1))
+    added_noise_4 = torch.normal(3.5, 0.1, size=(512,1))
+    added_noise_5 = torch.normal(4.5, 0.1, size=(512,1))
+    added_noise_6 = torch.normal(5.5, 0.1, size=(512,1))
+    added_noise_7 = torch.normal(6.5, 0.1, size=(512,1))
+    added_noise_8 = torch.normal(7.5, 0.1, size=(512,1))
+    added_noise_9 = torch.normal(8.5, 0.1, size=(512,1))
+    added_noise_10 = torch.normal(9.5, 0.1, size=(512,1))
+    noise_list = [added_noise_1, added_noise_2, added_noise_3, added_noise_4, added_noise_5, added_noise_6, added_noise_7, added_noise_8, added_noise_9, added_noise_10]
+
+    #  We need to change the incremnet for each task
+    for k in range(0, 10):  # We don't need to do classification for th first tasks as there are only 1 classes.
         print(f"Start of Evaluation till Task number {((k * 10)//10)+1}")
         print(f"Number of classes (from starting): {args.increment + (k * 10)}")
 
         task_id = int((args.initclass + args.increment + (k * 10))/10)
         args.mean = task_id - 0.5
 
-        print(f"Mean: {args.mean}")
-        print(f"Std: {args.std}")
+        print(f"Mean: {noise_list[k].mean()}")
+        print(f"Std: {noise_list[k].std()}")
 
         trsf = transforms.Compose([
         transforms.Resize((224,224)),
@@ -100,7 +115,7 @@ def main(args):
     
         val_dataset = dataset_all(root = './data', 
                             classes_subset=list(np.arange(args.initclass, args.initclass + args.increment + (k * 10))), 
-                            train = False, transform=trsf)
+                            train = True, transform=trsf)
     
         val_loader = DataLoader(
                 val_dataset,
@@ -114,10 +129,10 @@ def main(args):
         recons_checkpoint = torch.load(os. path.join(args.checkpoint, str(task_id).zfill(2),'100.pth'))['state_dict']
         recons_model.load_state_dict(recons_checkpoint)
 
-        summary(recons_model, input_size=[(args.batch_size,3,224,224),(args.batch_size,512)],
-                            col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
-        # summary(recons_model, input_size=(args.batch_size,3,224,224),
-        #                      col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
+        # summary(recons_model, input_size=[(args.batch_size,3,224,224),(args.batch_size,512)],
+        #                     col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
+        summary(recons_model, input_size=(args.batch_size,3,224,224),
+                             col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
     
         criterion = nn.L1Loss(reduction='none')
         recons_model.eval()
@@ -127,11 +142,11 @@ def main(args):
                             col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
     
         noises = []
-        for num in reversed(range(len(range(task_id-1)))):  # We need to add noise for all the previous tasks
-            noises.append(torch.normal(args.mean-(num + 1), 0.1, size=(32,1)).cuda(non_blocking=True))
-            print(f"Mean: {args.mean-(num + 1)}")
+        if task_id > 1:
+            for num in range(len(range(task_id-1))):
+                noises.append(noise_list[num].cuda(non_blocking=True))
         
-        noises.append(torch.normal(args.mean, 0.1, size=(32,1)).cuda(non_blocking=True))
+        noises.append(noise_list[task_id-1].cuda(non_blocking=True))
 
         dataset_pred = []
         dataset_gt = []
@@ -147,11 +162,11 @@ def main(args):
 
                 losses = []
                 for noise in noises:
-                    noise_pad = utils.pad_noise(noise.transpose(0, 1))
+                    # noise_pad = utils.pad_noise(noise.transpose(0, 1))
 
-                    # output = recons_model(image, noise_pad.transpose(0, 1))
-                    output = recons_model(image, noise_pad)
-                    # output = recons_model(image)
+                    # output = recons_model(image, noise_pad)
+                    # output = recons_model(image, noise.transpose(0, 1))
+                    output = recons_model(image)
                     losses.append(criterion(torch.mean(output, dim=(1)), torch.mean(noise.transpose(0, 1), dim=(1))))
                 
                 dataset_pd = torch.argmin(torch.stack(losses)).item()

@@ -164,8 +164,8 @@ def main_worker(gpu, args):
             checkpoint = torch.load(f"{args.pth_save_fold}{str(task_id-1).zfill(2)}/100.pth")['state_dict']
             model.load_state_dict(checkpoint)
 
-        summary(model.cuda(), [(args.batch_size,3,224,224),(args.batch_size,512)], col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
-        # summary(model.cuda(), (args.batch_size,3,224,224), col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
+        # summary(model.cuda(), [(args.batch_size,3,224,224),(args.batch_size,512)], col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
+        summary(model.cuda(), (args.batch_size,3,224,224), col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
 
         if args.rank == 0:       
             total_params = sum(p.numel() for p in model.parameters())
@@ -308,8 +308,8 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
         # added_noise_pad = utils.pad_noise(added_noise)
         # gt_noise_pad = utils.pad_noise(gt_noise)
 
-        output = model(image, added_noise)
-        # output = model(image)
+        # output = model(image, added_noise)
+        output = model(image)
 
         # print("Images from Different Datasets", np.unique((target // args.increment).cpu(), return_counts=True)[1])
 
@@ -481,8 +481,8 @@ def validate(model, noise):
 
             # noise_pad = utils.pad_noise(noise)
 
-            output = model(image, noise)
-            # output = model(image)
+            # output = model(image, noise)
+            output = model(image)
             pred_noises.append(torch.mean(output, dim=(1)).detach().cpu())        
     
     concat_pred_noises = torch.cat(pred_noises)
@@ -535,9 +535,9 @@ def validate_classification(model, noise_list, task_id):
 
                 # noise_pad = utils.pad_noise(noise.transpose(0, 1))
 
-                output = model(image, noise.transpose(0, 1))
+                # output = model(image, noise.transpose(0, 1))
                 # output = model(image, noise_pad)
-                # output = model(image)
+                output = model(image)
 
                 loss = criterion(torch.mean(output, dim=(1)), torch.mean(noise.transpose(0, 1), dim=(1)))
                 losses.append(loss)
