@@ -13,6 +13,9 @@ MEAN=$3
 OUTPUT=results/${NAME}-${MODEL_ARC}/
 mkdir -p ${OUTPUT}
 
+# --learning-rate 0.005
+# --weight-decay 1e-4
+
 # CUDA_LAUNCH_BLOCKING=1
 python3 -u train.py \
     --arch $MODEL_ARC \
@@ -21,10 +24,10 @@ python3 -u train.py \
     --initclass 0 \
     --increment 10 \
     --workers 8 \
-    --epochs 100 \
+    --epochs 200 \
     --start-epoch 0 \
     --batch-size 32 \
-    --learning-rate 0.005 \
+    --learning-rate 0.1 \
     --momentum 0.9 \
     --weight-decay 1e-4 \
     --print-freq 25 \

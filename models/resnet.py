@@ -103,48 +103,119 @@ class ResNetAutoEncoder(nn.Module):
         #         nn.ConvTranspose2d(in_channels=128, out_channels=512, kernel_size=7, stride=1, padding=0, output_padding=0, bias=False),
         # )
 
-        # self.decoder_2 = nn.Sequential(
-
-        #         nn.Linear(in_features=512, out_features=768),
-        #         nn.BatchNorm1d(768),  
-        #         nn.ReLU(),
-        #         # nn.Dropout(0.2),
-
-        #         nn.Linear(in_features=768, out_features=1024),
-        #         nn.BatchNorm1d(1024),
-        #         nn.ReLU(),  
-        #         nn.Dropout(0.2),
-
-        #         nn.Linear(in_features=1024, out_features=768),
-        #         nn.BatchNorm1d(768),  
-        #         nn.ReLU(),
-        #         # nn.Dropout(0.2),
-
-        #         nn.Linear(in_features=768, out_features=512),
-        #         nn.ReLU()
-        # )
-
+        # This is when we add 512 and expect 512 (default) 
         self.decoder_2 = nn.Sequential(
 
                 nn.Linear(in_features=512, out_features=768),
                 nn.BatchNorm1d(768),  
                 nn.ReLU(),
+                # nn.Dropout(0.2),
+
+                nn.Linear(in_features=768, out_features=1024),
+                nn.BatchNorm1d(1024),
+                nn.ReLU(),  
+                nn.Dropout(0.2),
+
+                nn.Linear(in_features=1024, out_features=768),
+                nn.BatchNorm1d(768),  
+                nn.ReLU(),
+                # nn.Dropout(0.2),
 
                 nn.Linear(in_features=768, out_features=512),
-                nn.BatchNorm1d(512),
-                nn.ReLU(),
-
-                nn.Linear(in_features=512, out_features=256),
-                nn.BatchNorm1d(256),
-                nn.ReLU(),
-
-                nn.Linear(in_features=256, out_features=128),
-                nn.BatchNorm1d(128),
-                nn.ReLU(),
-
-                nn.Linear(in_features=128, out_features=32),
-                nn.ReLU(),
+                nn.ReLU()
         )
+
+        # This is when we add 512 but expect 32  
+        # self.decoder_2 = nn.Sequential(
+
+        #         nn.Linear(in_features=512, out_features=768),
+        #         nn.BatchNorm1d(768),  
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=768, out_features=1024),
+        #         nn.BatchNorm1d(1024),
+        #         nn.ReLU(),  
+
+        #         nn.Linear(in_features=1024, out_features=768),
+        #         nn.BatchNorm1d(768),  
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=768, out_features=512),
+        #         nn.BatchNorm1d(512),  
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=512, out_features=32),
+        #         nn.ReLU()
+        # )
+
+        # This is when we add 512 and expect 512  but little more complex
+        # self.decoder_2 = nn.Sequential(
+
+        #         nn.Linear(in_features=512, out_features=1024),
+        #         nn.BatchNorm1d(1024),
+        #         nn.ReLU(),  
+
+        #         nn.Linear(in_features=1024, out_features=2048),
+        #         nn.BatchNorm1d(2048),  
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=2048, out_features=4096),
+        #         nn.BatchNorm1d(4096),  
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=4096, out_features=2048),
+        #         nn.BatchNorm1d(2048),  
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=2048, out_features=1024),
+        #         nn.BatchNorm1d(1024),  
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=1024, out_features=512),
+        #         nn.ReLU(),
+        # )
+
+        # This is when we add 512 and expect 512  but bottelneck
+        # self.decoder_2 = nn.Sequential(
+
+        #         nn.Linear(in_features=512, out_features=256),
+        #         nn.BatchNorm1d(256),
+        #         nn.ReLU(),  
+
+        #         nn.Linear(in_features=256, out_features=128),
+        #         nn.BatchNorm1d(128),  
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=128, out_features=256),
+        #         nn.BatchNorm1d(256),  
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=256, out_features=512),
+        #         nn.ReLU(),
+        #                         )
+
+        # This is when we add 32 and expect 32  
+        # self.decoder_2 = nn.Sequential(
+
+        #         nn.Linear(in_features=512, out_features=768),
+        #         nn.BatchNorm1d(768),  
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=768, out_features=512),
+        #         nn.BatchNorm1d(512),
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=512, out_features=256),
+        #         nn.BatchNorm1d(256),
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=256, out_features=128),
+        #         nn.BatchNorm1d(128),
+        #         nn.ReLU(),
+
+        #         nn.Linear(in_features=128, out_features=32),
+        #         nn.ReLU(),
+        # )
 
         # self.decoder = nn.Sequential(
         #         nn.Linear(in_features=512, out_features=768),
@@ -175,18 +246,18 @@ class ResNetAutoEncoder(nn.Module):
         #         nn.Linear(in_features=768, out_features=512),
         # )
 
-    def forward(self, x, noise):
-        x = self.encoder(x)
-        x = self.decoder_1(x)
-        x = self.decoder_2(x.squeeze(dim=-1).squeeze(dim=-1) + noise)
-        # x = self.decoder_3(x.unsqueeze(dim=-1).unsqueeze(dim=-1))
-        return x
-
-    # def forward(self, x):
+    # def forward(self, x, noise):
     #     x = self.encoder(x)
     #     x = self.decoder_1(x)
-    #     x = self.decoder_2(x.squeeze(dim=-1).squeeze(dim=-1))
+    #     x = self.decoder_2(x.squeeze(dim=-1).squeeze(dim=-1) + noise)
+    #     # x = self.decoder_3(x.unsqueeze(dim=-1).unsqueeze(dim=-1))
     #     return x
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder_1(x)
+        x = self.decoder_2(x.squeeze(dim=-1).squeeze(dim=-1))
+        return x
 
     ## Adding Noise in the Latent
     # def forward(self, x, noise):

@@ -97,7 +97,7 @@ def main(args):
     ngpus_per_node = torch.cuda.device_count()
     print('=> ngpus : {}'.format(ngpus_per_node))
 
-    wandb.init(project="CL", entity = 'moareeb', name=args.name, config=args)
+    # wandb.init(project="CL", entity = 'moareeb', name=args.name, config=args)
 
     if args.parallel == 1: 
         # single machine multi card       
@@ -134,23 +134,12 @@ def main_worker(gpu, args):
     mean_diff = 1
     args.replay = False
 
-    # added_noise_1 = torch.normal(0.5, 0.1, size=(512,1))
-    # added_noise_2 = torch.normal(1.5, 0.1, size=(512,1))
-    # added_noise_3 = torch.normal(2.5, 0.1, size=(512,1))
-    # added_noise_4 = torch.normal(3.5, 0.1, size=(512,1))
-    # added_noise_5 = torch.normal(4.5, 0.1, size=(512,1))
-    # added_noise_6 = torch.normal(5.5, 0.1, size=(512,1))
-    # added_noise_7 = torch.normal(6.5, 0.1, size=(512,1))
-    # added_noise_8 = torch.normal(7.5, 0.1, size=(512,1))
-    # added_noise_9 = torch.normal(8.5, 0.1, size=(512,1))
-    # added_noise_10 = torch.normal(9.5, 0.1, size=(512,1))
-    # noise_list = [added_noise_1, added_noise_2, added_noise_3, added_noise_4, added_noise_5, added_noise_6, added_noise_7, added_noise_8, added_noise_9, added_noise_10]
-
     for k in range(10):
         print(f"Start of Task number: {((k * 10)//10)+1}")
         print(f"Start of Class number: {k*10}")
         print(f"Mean: {args.mean}")
         print(f"Std: {args.std}")
+        print(f"Replay: {args.replay}")
 
         args.initclass = k*10
         task_id = ((args.initclass)//10)+1
@@ -160,7 +149,7 @@ def main_worker(gpu, args):
 
         if task_id > 1:
             args.replay = True
-            checkpoint = torch.load(f"{args.pth_save_fold}{str(task_id-1).zfill(2)}/100.pth")['state_dict']
+            checkpoint = torch.load(f"{args.pth_save_fold}{str(task_id-1).zfill(2)}/200.pth")['state_dict']
             model.load_state_dict(checkpoint)
 
         # summary(model.cuda(), [(args.batch_size,3,224,224),(args.batch_size,512)], col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
@@ -244,14 +233,14 @@ def main_worker(gpu, args):
             global current_lr
             current_lr = utils.adjust_learning_rate_cosine(optimizer, epoch, args)
         
-            if epoch == 0:        #### Just to check whether the weights of the previous task is loaded properly
-                do_validate(model, epoch, args, task_id, mean_diff)
+            # if epoch == 0:        #### Just to check whether the weights of the previous task is loaded properly
+            #     do_validate(model, epoch, args, task_id, mean_diff)
 
             # train for one epoch
             do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id)
 
-            if (epoch+1) % args.print_freq == 0 and args.rank == 0:
-                do_validate(model, epoch, args, task_id, mean_diff)
+            # if (epoch+1) % args.print_freq == 0 and args.rank == 0:
+            #     do_validate(model, epoch, args, task_id, mean_diff)
 
             # save pth
             save_path = os.path.join(args.pth_save_fold, str(task_id).zfill(2), '{}.pth'.format(str(epoch+1).zfill(3)))
@@ -291,6 +280,8 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
     total_steps = len(train_loader)
 
     for i, (image, target, added_noise, gt_noise) in enumerate(train_loader):
+        
+        breakpoint()
         optimizer.zero_grad()
         data_time.update(time.time() - end)
         global iters
@@ -334,7 +325,7 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
         # weights_value = utils.task_weight(((args.initclass)//10))
         # weights_value = { 2: weight_2, 1: weight_1, 0: weight_0}
 
-        # weights_value = utils.weight_dictionary(task_id, exponential_factor=1.6)
+        # weights_value = utils.weight_dictionary(task_id, exponential_factor=1.3)
 
         # print("Weight Value of datasets: ", weights_value)
 
@@ -349,8 +340,15 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
         
         # loss1_up = torch.mul(torch.mean(loss1, axis=(1)),  torch.tensor(adjusted_weights_list).cuda())
         # loss1_mean = torch.mean(loss1)
+        # loss1 = criterion(output, gt_noise)
+
         loss1 = criterion(output, gt_noise)
         # loss1_up = torch.mul(torch.mean(loss1, axis=(1)),  torch.tensor(adjusted_weights_list).cuda())
+        
+        # This is when we calculate loss between the means of the output and the gt noise
+        # loss1 = criterion(torch.mean(output, dim=(1)), torch.mean(gt_noise, dim=(1)))
+        # loss1_up = torch.mul(loss1,  torch.tensor(adjusted_weights_list).cuda())
+
         loss1_mean = torch.mean(loss1)
 
 
@@ -405,21 +403,21 @@ def do_train(train_loader, model, criterion,  optimizer, epoch, args, task_id):
 
         if i % args.print_freq == 0 and args.rank == 0:
             progress.display(i)
-            wandb.log({
-                # f"{task_id}/loss/loss": loss,
-                f"{task_id}/loss/loss1": loss1_mean,
-                # f"{task_id}/loss/loss2": loss2_mean,
-                f"{task_id}/model/model_mean": output.mean(),
-                f"{task_id}/model/model_std": output.std(),
-                f"{task_id}/data/Added noise mean": added_noise.mean(),
-                f"{task_id}/data/GT noise mean": gt_noise.mean(),
-                f"{task_id}/data/Added noise std": added_noise.std(),
-                f"{task_id}/data/GT noise std": gt_noise.std(),
-                f"{task_id}/experiment/LR": current_lr,
-                f"{task_id}/experiment/Epoch": epoch+1
-            }, 
-            # step=(epoch*total_steps +i) + g_step
-            )
+            # wandb.log({
+            #     # f"{task_id}/loss/loss": loss,
+            #     f"{task_id}/loss/loss1": loss1_mean,
+            #     # f"{task_id}/loss/loss2": loss2_mean,
+            #     f"{task_id}/model/model_mean": output.mean(),
+            #     f"{task_id}/model/model_std": output.std(),
+            #     f"{task_id}/data/Added noise mean": added_noise.mean(),
+            #     f"{task_id}/data/GT noise mean": gt_noise.mean(),
+            #     f"{task_id}/data/Added noise std": added_noise.std(),
+            #     f"{task_id}/data/GT noise std": gt_noise.std(),
+            #     f"{task_id}/experiment/LR": current_lr,
+            #     f"{task_id}/experiment/Epoch": epoch+1
+            # }, 
+            # # step=(epoch*total_steps +i) + g_step
+            # )
         
         # return (epoch*total_steps +i) + g_step
 
@@ -535,7 +533,7 @@ def validate_classification(model, test_noise_mean, task_id):
 
                 # noise_pad = utils.pad_noise(noise.transpose(0, 1))
 
-                # output = model(image, noise)
+                # output = model(image, noise.transpose(0, 1))
                 # output = model(image, noise_pad)
                 output = model(image)
 

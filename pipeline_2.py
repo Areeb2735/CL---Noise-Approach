@@ -100,7 +100,7 @@ def main(args):
     
         val_dataset = dataset_all(root = './data', 
                             classes_subset=list(np.arange(args.initclass, args.initclass + args.increment + (k * 10))), 
-                            train = True, transform=trsf)
+                            train = False, transform=trsf)
     
         val_loader = DataLoader(
                 val_dataset,
@@ -114,10 +114,10 @@ def main(args):
         recons_checkpoint = torch.load(os. path.join(args.checkpoint, str(task_id).zfill(2),'100.pth'))['state_dict']
         recons_model.load_state_dict(recons_checkpoint)
 
-        summary(recons_model, input_size=[(args.batch_size,3,224,224),(args.batch_size,512)],
-                            col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
-        # summary(recons_model, input_size=(args.batch_size,3,224,224),
-        #                      col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
+        # summary(recons_model, input_size=[(args.batch_size,3,224,224),(args.batch_size,512)],
+        #                     col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
+        summary(recons_model, input_size=(args.batch_size,3,224,224),
+                             col_names=['input_size', 'output_size' , "num_params", "kernel_size", "trainable"]) 
     
         criterion = nn.L1Loss(reduction='none')
         recons_model.eval()
@@ -147,10 +147,10 @@ def main(args):
 
                 losses = []
                 for noise in noises:
-                    noise_pad = utils.pad_noise(noise.transpose(0, 1))
-                    output = recons_model(image, noise_pad)
+                    # noise_pad = utils.pad_noise(noise.transpose(0, 1))
+                    # output = recons_model(image, noise_pad)
                     # output = recons_model(image, noise.transpose(0, 1))
-                    # output = recons_model(image)
+                    output = recons_model(image)
                     losses.append(criterion(torch.mean(output, dim=(1)), torch.mean(noise.transpose(0, 1), dim=(1))))
                 
                 dataset_pd = torch.argmin(torch.stack(losses)).item()
@@ -209,7 +209,7 @@ def main(args):
         plt.title('Confusion Matrix for Dataset')
         plt.xlabel('Predicted labels')
         plt.ylabel('True labels')
-        # plt.savefig(os.path.join(os.path.dirname(os. path.join(args.checkpoint, str(task_id).zfill(2), '')), 'confusion_matrix_dataset.png'))
+        plt.savefig(os.path.join(os.path.dirname(os. path.join(args.checkpoint, str(task_id).zfill(2), '')), 'confusion_matrix_dataset.png'))
         plt.show()
 
         # Plot and save confusion matrix for classes
@@ -218,7 +218,7 @@ def main(args):
         plt.title('Confusion Matrix for Classes')
         plt.xlabel('Predicted labels')
         plt.ylabel('True labels')
-        # plt.savefig(os.path.join(os.path.dirname(os. path.join(args.checkpoint, str(task_id).zfill(2), '')), 'confusion_matrix_classes.png'))
+        plt.savefig(os.path.join(os.path.dirname(os. path.join(args.checkpoint, str(task_id).zfill(2), '')), 'confusion_matrix_classes.png'))
         plt.show()
 
 

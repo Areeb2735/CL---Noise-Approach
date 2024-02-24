@@ -156,6 +156,16 @@ def weight_dictionary(n, exponential_factor=1.6):
     result_dict = {i: 2.5 * (n-1) * (exponential_factor ** (n-1-i)) if i != n - 1 else 1 for i in range(n)}
     return result_dict
 
+# def weight_dictionary(n, exponential_factor=1.6):
+#     if n <= 0:
+#         raise ValueError("Input 'n' must be a positive integer.")
+
+#     # result_dict = {i: 2.5 * (n-1) if i != n - 1 else 1 for i in range(n)}
+#     # result_dict = {i: 2.5 * (n-1) * (exponential_factor ** (n-1-i)) if i != n - 1 else 1 for i in range(n)}
+#     result_dict = {i: 2.5 * (n-1) * (exponential_factor ** (n-1-i)) if i != n - 1 else 1 for i in range(n)}
+#     result_dict = {i: 1+ (weight / max(result_dict.values())) for i, weight in result_dict.items()}
+#     return result_dict
+
 def pad_noise(original_tensor):
     desired_size = 512
     num_zeros_to_pad = desired_size - original_tensor.size(1)
